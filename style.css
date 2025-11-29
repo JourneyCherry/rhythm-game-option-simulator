@@ -1,30 +1,211 @@
+/* ====================
+   Global CSS Variables
+   ==================== */
+:root {
+    /* 전체 플레이 화면 관련 */
+    --playfield-width-vw: 60; /* viewport width 기준 비율 */
+    --playfield-max-width: 900px;
+
+    /* 노트 라인 영역(5라인 전체)의 가로 폭 비율 */
+    --lane-area-width: 20%; /* playfield 가로 대비 20% */
+    --lane-area-left: 50%;
+    --lane-area-translate-x: -50%;
+
+    /* 라인 테두리 두께 */
+    --lane-outer-border-thick: 3px; /* 양 끝 굵은 선 */
+    --lane-inner-border-thin: 1px; /* 내부 구분선 */
+
+    /* 서든/히든 가림 박스 관련 */
+    --cover-top-height: 15%;
+    --cover-bottom-height: 15%;
+
+    /* 판정 라인 위치/두께 (세로 방향) */
+    --judgeline-position: 80%; /* playfield 높이 대비 위치 (대략 아래쪽 20%) */
+    --judgeline-thickness: 0.6%; /* 판정선 두께 */
+
+    /* 노트/박자선/마디선 관련 */
+    --note-height: 0.6%; /* 노트 세로 높이 */
+
+    --beatline-height: 0.4%;
+    --beatline-color: rgba(255, 255, 255, 0.5);
+
+    --barline-height: 0.8%;
+    --barline-color: rgba(255, 255, 255, 0.9);
+
+    /* 색상 */
+    --color-bg-body: #111;
+    --color-bg-header: #222;
+    --color-text-main: #eee;
+    --color-text-header: #fff;
+    --color-border-playfield: #555;
+    --color-line-outer: rgba(255, 255, 255, 0.8);
+    --color-line-inner: rgba(255, 255, 255, 0.4);
+}
+
+/* =========================
+   Layout & Base
+   ========================= */
+
 body {
     margin: 0;
     padding: 0;
     font-family: sans-serif;
+    background: var(--color-bg-body);
+    color: var(--color-text-main);
 }
 
 header {
     padding: 16px;
-    background: #222;
-    color: #fff;
+    background: var(--color-bg-header);
+    color: var(--color-text-header);
 }
 
-#controls {
+.layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 16px;
-    background: #f3f3f3;
 }
 
-#previewWrapper {
-    width: 360px;
-    height: 640px;
-    border: 1px solid #ccc;
-    margin: 20px auto;
-    position: relative;
-}
-
-#preview {
+/* 추후 옵션 UI 영역 */
+#controls {
     width: 100%;
-    height: 100%;
-    background: black;
+    max-width: 960px;
+    padding: 12px 0;
+}
+
+/* 플레이 화면 컨테이너: 중앙 정렬 */
+
+#playfield-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 24px 0;
+}
+
+/* 실제 플레이 화면(프리뷰): 16:9 비율, 중앙 */
+
+#playfield {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    width: calc(var(--playfield-width-vw) * 1vw);
+    max-width: var(--playfield-max-width);
+    background: #000;
+    border: 2px solid var(--color-border-playfield);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
+    overflow: hidden;
+}
+
+/* 노트 라인 5개 */
+
+.note-lanes {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+
+    width: var(--lane-area-width);
+    left: var(--lane-area-left);
+    transform: translateX(var(--lane-area-translate-x));
+
+    display: flex;
+
+    /* 최외곽 세로선 */
+    border-left: var(--lane-outer-border-thick) solid var(--color-line-outer);
+    border-right: var(--lane-outer-border-thick) solid var(--color-line-outer);
+}
+
+.lane {
+    flex: 1;
+
+    /* 내부 노트 구분선 */
+    border-right: var(--lane-inner-border-thin) solid var(--color-line-inner);
+}
+
+/* 마지막 lane 오른쪽에는 내부선을 그리지 않음 (이미 note-lanes 오른쪽 border가 있음) */
+.lane:last-child {
+    border-right: none;
+}
+
+/* 판정선 */
+#judgeline {
+    position: absolute;
+    width: var(--lane-area-width);
+    left: var(--lane-area-left);
+    transform: translateX(var(--lane-area-translate-x));
+    height: var(--judgeline-thickness);
+    top: var(--judgeline-position);
+    background: rgba(255, 255, 255, 0.5);
+    z-index: 5;
+}
+
+.note-layer,
+.beat-layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--lane-area-width);
+    left: var(--lane-area-left);
+    transform: translateX(var(--lane-area-translate-x));
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* 노트 샘플 */
+.note {
+    position: absolute;
+    width: calc(100% / 5);
+    height: var(--note-height);
+    border-radius: 4px;
+}
+
+/* 박자선/마디선 */
+.timing-line {
+    position: absolute;
+    width: 100%;
+}
+
+.timing-line.beat {
+    height: var(--beatline-height);
+    background: var(--beatline-color);
+}
+
+.timing-line.bar {
+    height: var(--barline-height);
+    background: var(--barline-color);
+}
+
+/* 위/아래 가림 상자 (Sudden/Hidden 영역용) */
+
+.cover {
+    position: absolute;
+
+    /* 노트 라인 영역과 동일한 폭 & 위치 */
+    width: var(--lane-area-width);
+    left: var(--lane-area-left);
+    transform: translateX(var(--lane-area-translate-x));
+
+    background: #000;
+    opacity: 1;
+    pointer-events: none;
+
+    z-index: 20;
+}
+
+/* 기본 높이는 대략 15% 정도. 나중에 JS로 height만 바꾸면 됨 */
+
+.cover-top {
+    top: 0;
+    height: var(--cover-top-height);
+
+    /* 경계선: 어디까지 가려졌는지 표시용 */
+    border-bottom: 2px solid var(--color-line-outer);
+}
+
+.cover-bottom {
+    bottom: 0;
+    height: var(--cover-bottom-height);
+
+    /* 경계선: 어디까지 가려졌는지 표시용 */
+    border-top: 2px solid var(--color-line-outer);
 }

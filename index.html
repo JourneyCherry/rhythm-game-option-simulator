@@ -1,22 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rhythm Game Option Simulator</title>
-    <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-    <header>
-        <h1>Rhythm Game Option Simulator</h1>
-    </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Rhythm Game Option Simulator</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <header>
+            <h1>Rhythm Game Option Simulator</h1>
+        </header>
 
-    <div id="controls"></div>
+        <main class="layout">
+            <section id="controls">
+                <!-- 나중에 게임 선택/옵션 UI 들어갈 자리-->
+            </section>
 
-    <div id="previewWrapper">
-        <div id="preview"></div>
-    </div>
+            <section id="playfield-container">
+                <div id="playfield">
+                    <!-- 노트 내려오는 라인 -->
+                    <div class="note-lanes">
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                        <div class="lane"></div>
+                    </div>
 
-    <script src="main.js"></script>
-</body>
+                    <!-- 판정선 -->
+                    <div id="judgeline"></div>
+
+                    <!-- 마디선 -->
+                    <div id="beat-layer" class="beat-layer"></div>
+                    <!-- 노트 -->
+                    <div id="note-layer" class="note-layer"></div>
+
+                    <!-- 서든 -->
+                    <div class="cover cover-top"></div>
+                    <!-- 히든 -->
+                    <div class="cover cover-bottom"></div>
+                </div>
+            </section>
+        </main>
+
+        <script src="main.js"></script>
+    </body>
 </html>
