@@ -11,11 +11,34 @@ document.addEventListener("DOMContentLoaded", () => {
         ? 0.8
         : judgeLinePercent / 100;
 
-    // 이동 관련 설정값 (추후 옵션으로 바꿀 예정)
-    const DIRECTION = 1; // 1: 위 -> 아래, -1: 아래 -> 위
-    const NOTE_SPEED_PER_SEC = 0.4; // 노트/박자선이 1초에 playfield 높이의 몇 배를 이동할지 (0~1 기준)
+    const config = {
+        direction: 1,
+        speed: 1,
+        sudden: 15,
+        hidden: 15,
+    };
 
-    const SPAWN_Y = -0.1;
+    function applyCoverHeights() {
+        document.documentElement.style.setProperty(
+            "--cover-top-height",
+            `${config.sudden}%`
+        );
+        document.documentElement.style.setProperty(
+            "--cover-bottom-height",
+            `${config.hidden}%`
+        );
+    }
+
+    applyCoverHeights();
+
+    // 이동 관련 설정값 (추후 옵션으로 바꿀 예정)
+
+    const SPAWN_Y_TOP = -0.1;
+    const SPAWN_Y_BOTTOM = 1.1;
+
+    function getSpawnY() {
+        return config.direction === 1 ? SPAWN_Y_TOP : SPAWN_Y_BOTTOM;
+    }
 
     // 샘플 데이터
     // 4/4 한 마디를 1/8로 나눈 구조
@@ -70,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return {
             el,
-            y: SPAWN_Y, // 화면 위쪽 밖에서 시작 (0=최상단, 1=최하단)
+            y: getSpawnY(),
             laneIndex,
             hidden: false,
         };
@@ -84,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return {
             el,
-            y: SPAWN_Y, // 약간 위에서 시작
+            y: getSpawnY(),
             kind,
         };
     }
@@ -127,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lastFrameTime = now;
         songTime += dt;
 
-        const delta = DIRECTION * NOTE_SPEED_PER_SEC * dt;
+        const signedSpeed = config.speed * (config.direction === 1 ? 1 : -1);
 
         // ----- 노트 스폰: 1,2,3,4,5,4,3,2 (1/8 간격) -----
         while (songTime >= nextNoteTime) {
@@ -155,19 +178,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ----- 노트 업데이트 -----
         activeNotes.forEach((note) => {
-            note.y += delta;
+            note.y += signedSpeed * dt;
             note.el.style.top = `${note.y * 100}%`;
 
             // 판정선 도달 시 숨김
-            if (!note.hidden && note.y >= JUDGE_LINE_Y) {
-                note.hidden = true;
-                note.el.style.display = "none";
+            if (!note.hidden) {
+                if (
+                    (config.direction === 1 && note.y >= JUDGE_LINE_Y) ||
+                    (config.direction === -1 && note.y <= JUDGE_LINE_Y)
+                ) {
+                    note.hidden = true;
+                    note.el.style.display = "none";
+                }
             }
         });
 
         // 화면 아래로 벗어난 노트 제거
         activeNotes = activeNotes.filter((note) => {
-            if (note.y > 1.1 || note.y < -0.2) {
+            const outOfScreen =
+                config.direction === 1 ? note.y > 1.1 : note.y < -0.1;
+            if (outOfScreen) {
                 noteLayer.removeChild(note.el);
                 return false;
             }
@@ -176,13 +206,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ----- 타이밍 라인(박자선/마디선) 업데이트 -----
         activeTimingLines.forEach((line) => {
-            line.y += delta;
+            line.y += signedSpeed * dt;
             line.el.style.top = `${line.y * 100}%`;
         });
 
         // 화면 아래로 벗어난 타이밍 라인 제거
         activeTimingLines = activeTimingLines.filter((line) => {
-            if (line.y > 1.1 || line.y < -0.2) {
+            const outOfScreen =
+                config.direction === 1 ? line.y > 1.1 : line.y < -0.1;
+            if (outOfScreen) {
                 beatLayer.removeChild(line.el);
                 return false;
             }
@@ -191,6 +223,163 @@ document.addEventListener("DOMContentLoaded", () => {
 
         requestAnimationFrame(loop);
     }
+
+    // --------------------
+    // 공통 옵션 컨트롤 컴포넌트
+    // --------------------
+
+    const controlsRoot = document.getElementById("controls");
+
+    function createNumericControl(def) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "option-control";
+
+        const label = document.createElement("label");
+        label.className = "option-label";
+        label.textContent = def.label;
+        label.htmlFor = `${def.id}-slider`;
+
+        const row = document.createElement("div");
+        row.className = "option-row";
+
+        const decBtn = document.createElement("button");
+        decBtn.type = "button";
+        decBtn.textContent = "-";
+        decBtn.className = "option-btn";
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.id = "${def.id}-slider";
+        slider.className = "option-slider";
+        slider.min = def.min;
+        slider.max = def.max;
+        slider.step = def.step;
+        slider.value = def.defaultValue;
+
+        const incBtn = document.createElement("button");
+        incBtn.type = "button";
+        incBtn.textContent = "+";
+        incBtn.className = "option-btn";
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "option-input";
+        input.min = def.min;
+        input.max = def.max;
+        input.step = def.step;
+        input.value = def.defaultValue;
+
+        row.append(decBtn, slider, incBtn, input);
+        wrapper.append(label, row);
+        controlsRoot.appendChild(wrapper);
+
+        function applyFromValue(raw) {
+            let v = parseFloat(raw);
+            if (Number.isNaN(v)) return;
+            if (v < def.min) v = def.min;
+            if (v > def.max) v = def.max;
+
+            slider.value = String(v);
+            input.value = String(v);
+            def.apply(v);
+        }
+
+        slider.addEventListener("input", () => {
+            applyFromValue(slider.value);
+        });
+
+        input.addEventListener("change", () => {
+            applyFromValue(slider.value);
+        });
+
+        decBtn.addEventListener("click", () => {
+            const v = parseFloat(slider.value) - def.step;
+            applyFromValue(v);
+        });
+
+        incBtn.addEventListener("click", () => {
+            const v = parseFloat(slider.value) + def.step;
+            applyFromValue(v);
+        });
+
+        def.apply(def.defaultValue);
+    }
+
+    // 현재 사용할 옵션 정의
+    const optionDefinitions = [
+        {
+            id: "noteSpeed",
+            label: "Note Speed",
+            min: 0.5,
+            max: 10.0,
+            step: 0.5,
+            defaultValue: config.speed,
+            apply(value) {
+                config.speed = value;
+            },
+        },
+        {
+            id: "sudden",
+            label: "Sudden",
+            min: 0,
+            max: 100,
+            step: 1,
+            defaultValue: config.sudden,
+            apply(value) {
+                config.sudden = value;
+                applyCoverHeights();
+            },
+        },
+        {
+            id: "hidden",
+            label: "Hidden",
+            min: 0,
+            max: 100,
+            step: 1,
+            defaultValue: config.hidden,
+            apply(value) {
+                config.hidden = value;
+                applyCoverHeights();
+            },
+        },
+    ];
+
+    optionDefinitions.forEach(createNumericControl);
+
+    // 방향(Direction)은 셀렉트로 처리
+    (function createDirectionControl() {
+        const wrapper = document.createElement("div");
+        wrapper.className = "option-control";
+
+        const label = document.createElement("label");
+        label.className = "option-label";
+        label.textContent = "Direction";
+
+        const select = document.createElement("select");
+        select.id = "directionSelect";
+        select.className = "option-select";
+
+        const optTopDown = document.createElement("option");
+        optTopDown.value = "1";
+        optTopDown.textContent = "Reverse";
+
+        const optBottomUp = document.createElement("option");
+        optBottomUp.value = "-1";
+        optBottomUp.textContent = "Normal";
+
+        select.append(optTopDown, optBottomUp);
+        select.value = String(config.direction);
+
+        select.addEventListener("change", () => {
+            const v = parseInt(select.value, 10);
+            if (v === 1 || v === -1) {
+                config.direction = v;
+            }
+        });
+
+        wrapper.append(label, select);
+        controlsRoot.appendChild(wrapper);
+    })();
 
     requestAnimationFrame(loop);
 });
