@@ -11,11 +11,33 @@ document.addEventListener("DOMContentLoaded", () => {
         ? 0.8
         : judgeLinePercent / 100;
 
+    const GAME_PRESETS = {
+        default5: {
+            id: "default5",
+            label: "Default 5-key",
+            direction: 1,
+            speed: 0.5,
+            sudden: 15,
+            hidden: 15,
+        },
+        fast5: {
+            id: "fast5",
+            label: "Fast 5-key",
+            direction: 1,
+            speed: 0.9,
+            sudden: 10,
+            hidden: 10,
+        },
+    };
+
+    const DEFAULT_PRESET_ID = "default5";
+    const DEFAULT_PRESET = GAME_PRESETS[DEFAULT_PRESET_ID];
+
     const config = {
-        direction: 1,
-        speed: 1,
-        sudden: 15,
-        hidden: 15,
+        direction: DEFAULT_PRESET.direction,
+        speed: DEFAULT_PRESET.speed,
+        sudden: DEFAULT_PRESET.sudden,
+        hidden: DEFAULT_PRESET.hidden,
     };
 
     function applyCoverHeights() {
@@ -229,6 +251,29 @@ document.addEventListener("DOMContentLoaded", () => {
     // --------------------
 
     const controlsRoot = document.getElementById("controls");
+    const controlHandles = {}; // 각 옵션 컨트롤에 접근하기 위한 핸들
+
+    function applyPreset(presetId, { syncControls = true } = {}) {
+        const preset = GAME_PRESETS[presetId];
+        if (!preset) return;
+
+        // config 갱신
+        config.direction = preset.direction;
+        config.speed = preset.speed;
+        config.sudden = preset.sudden;
+        config.hidden = preset.hidden;
+
+        // CSS 반영
+        applyCoverHeights();
+
+        // 기존 컨트롤 값도 preset에 맞게 변경
+        if (syncControls) {
+            controlHandles.direction?.setValue(config.direction);
+            controlHandles.speed?.setValue(config.speed);
+            controlHandles.sudden?.setValue(config.sudden);
+            controlHandles.hidden?.setValue(config.hidden);
+        }
+    }
 
     function createNumericControl(def) {
         const wrapper = document.createElement("div");
@@ -237,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const label = document.createElement("label");
         label.className = "option-label";
         label.textContent = def.label;
-        label.htmlFor = `${def.id}-slider`;
+        label.htmlFor = "${def.id}-slider";
 
         const row = document.createElement("div");
         row.className = "option-row";
@@ -274,6 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         controlsRoot.appendChild(wrapper);
 
         function applyFromValue(raw) {
+            // 값 적용. 여러 컨트롤이 같이 변경되어야 하므로 함수로 관리
             let v = parseFloat(raw);
             if (Number.isNaN(v)) return;
             if (v < def.min) v = def.min;
@@ -289,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         input.addEventListener("change", () => {
-            applyFromValue(slider.value);
+            applyFromValue(input.value);
         });
 
         decBtn.addEventListener("click", () => {
@@ -302,12 +348,73 @@ document.addEventListener("DOMContentLoaded", () => {
             applyFromValue(v);
         });
 
+        // 외부에서 값 세팅 가능하게 핸들 등록
+        controlHandles[def.id] = {
+            setValue(v) {
+                applyFromValue(v);
+            },
+        };
+
+        // 초기값 적용
+        applyFromValue(def.defaultValue);
+    }
+
+    function createSelectControl(def) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "option-control";
+
+        const label = document.createElement("label");
+        label.className = "option-label";
+        label.textContent = def.label;
+
+        const select = document.createElement("select");
+        select.className = "option-select";
+
+        def.options.forEach((opt) => {
+            const optionE1 = document.createElement("option");
+            optionE1.value = String(opt.value);
+            optionE1.textContent = opt.label;
+            select.append(optionE1);
+        });
+
+        select.value = String(def.defaultValue);
+
+        select.addEventListener("change", () => {
+            def.apply(select.value);
+        });
+
+        wrapper.append(label, select);
+        controlsRoot.appendChild(wrapper);
+
+        // 외부에서 값 세팅 가능하게 핸들 등록
+        controlHandles[def.id] = {
+            setValue(v) {
+                select.value = String(v);
+                def.apply(v);
+            },
+        };
+
+        // 초기값 설정
         def.apply(def.defaultValue);
     }
 
     // 현재 사용할 옵션 정의
     const optionDefinitions = [
         {
+            type: "select",
+            id: "gamePreset",
+            label: "Game Preset",
+            options: Object.values(GAME_PRESETS).map((p) => ({
+                value: p.id,
+                label: p.label,
+            })),
+            defaultValue: DEFAULT_PRESET_ID,
+            apply(value) {
+                applyPreset(value, { syncControls: true });
+            },
+        },
+        {
+            type: "number",
             id: "noteSpeed",
             label: "Note Speed",
             min: 0.5,
@@ -319,6 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
         },
         {
+            type: "number",
             id: "sudden",
             label: "Sudden",
             min: 0,
@@ -331,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
             },
         },
         {
+            type: "number",
             id: "hidden",
             label: "Hidden",
             min: 0,
@@ -342,44 +451,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 applyCoverHeights();
             },
         },
+        {
+            type: "select",
+            id: "direction",
+            label: "Direction",
+            options: [
+                { value: 1, label: "Reverse" },
+                { value: -1, label: "Nornal" },
+            ],
+            defaultValue: config.direction,
+            apply(value) {
+                const v = parseInt(value, 10);
+                if (v === 1 || v === -1) {
+                    config.direction = v;
+                }
+            },
+        },
     ];
 
-    optionDefinitions.forEach(createNumericControl);
-
-    // 방향(Direction)은 셀렉트로 처리
-    (function createDirectionControl() {
-        const wrapper = document.createElement("div");
-        wrapper.className = "option-control";
-
-        const label = document.createElement("label");
-        label.className = "option-label";
-        label.textContent = "Direction";
-
-        const select = document.createElement("select");
-        select.id = "directionSelect";
-        select.className = "option-select";
-
-        const optTopDown = document.createElement("option");
-        optTopDown.value = "1";
-        optTopDown.textContent = "Reverse";
-
-        const optBottomUp = document.createElement("option");
-        optBottomUp.value = "-1";
-        optBottomUp.textContent = "Normal";
-
-        select.append(optTopDown, optBottomUp);
-        select.value = String(config.direction);
-
-        select.addEventListener("change", () => {
-            const v = parseInt(select.value, 10);
-            if (v === 1 || v === -1) {
-                config.direction = v;
-            }
-        });
-
-        wrapper.append(label, select);
-        controlsRoot.appendChild(wrapper);
-    })();
+    optionDefinitions.forEach((def) => {
+        if (def.type === "number") {
+            createNumericControl(def);
+        } else if (def.type === "select") {
+            createSelectControl(def);
+        }
+    });
 
     requestAnimationFrame(loop);
 });
