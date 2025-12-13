@@ -282,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const label = document.createElement("label");
         label.className = "option-label";
         label.textContent = def.label;
-        label.htmlFor = "${def.id}-slider";
+        label.htmlFor = `${def.id}-slider`;
 
         const row = document.createElement("div");
         row.className = "option-row";
@@ -294,7 +294,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const slider = document.createElement("input");
         slider.type = "range";
-        slider.id = "${def.id}-slider";
+        slider.id = `${def.id}-slider`;
         slider.className = "option-slider";
         slider.min = def.min;
         slider.max = def.max;
@@ -371,10 +371,10 @@ document.addEventListener("DOMContentLoaded", () => {
         select.className = "option-select";
 
         def.options.forEach((opt) => {
-            const optionE1 = document.createElement("option");
-            optionE1.value = String(opt.value);
-            optionE1.textContent = opt.label;
-            select.append(optionE1);
+            const optionEl = document.createElement("option");
+            optionEl.value = String(opt.value);
+            optionEl.textContent = opt.label;
+            select.append(optionEl);
         });
 
         select.value = String(def.defaultValue);
@@ -415,7 +415,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         {
             type: "number",
-            id: "noteSpeed",
+            id: "speed",
             label: "Note Speed",
             min: 0.5,
             max: 10.0,
@@ -457,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
             label: "Direction",
             options: [
                 { value: 1, label: "Reverse" },
-                { value: -1, label: "Nornal" },
+                { value: -1, label: "Normal" },
             ],
             defaultValue: config.direction,
             apply(value) {
