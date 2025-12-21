@@ -1,4 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
+async function loadPresets() {
+    const res = await fetch("./game_presets.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(`failed to load presets: ${res.status}`);
+    return await res.json();
+}
+
+async function init() {
     console.log("Rhythm Game Option Simulator initialized");
 
     const rootStyles = getComputedStyle(document.documentElement);
@@ -11,34 +17,18 @@ document.addEventListener("DOMContentLoaded", () => {
         ? 0.8
         : judgeLinePercent / 100;
 
-    const GAME_PRESETS = {
-        default5: {
-            id: "default5",
-            label: "Default 5-key",
-            direction: 1,
-            speed: 0.5,
-            sudden: 15,
-            hidden: 15,
-        },
-        fast5: {
-            id: "fast5",
-            label: "Fast 5-key",
-            direction: 1,
-            speed: 0.9,
-            sudden: 10,
-            hidden: 10,
-        },
-    };
+    const presetData = await loadPresets();
+    const presetMap = Object.fromEntries(
+        presetData.presets.map((p) => [p.id, p])
+    );
 
-    const DEFAULT_PRESET_ID = "default5";
-    const DEFAULT_PRESET = GAME_PRESETS[DEFAULT_PRESET_ID];
+    const DEFAULT_PRESET_ID = presetData.defaultPresetId;
+    currentPresetId = DEFAULT_PRESET_ID;
+    currentPreset = presetMap[currentPresetId];
 
-    const config = {
-        direction: DEFAULT_PRESET.direction,
-        speed: DEFAULT_PRESET.speed,
-        sudden: DEFAULT_PRESET.sudden,
-        hidden: DEFAULT_PRESET.hidden,
-    };
+    config = makeConfigFromPreset(currentPreset);
+
+    const applyMap = makeApplyMap(config);
 
     function applyCoverHeights() {
         document.documentElement.style.setProperty(
@@ -250,32 +240,84 @@ document.addEventListener("DOMContentLoaded", () => {
     // 공통 옵션 컨트롤 컴포넌트
     // --------------------
 
-    const controlsRoot = document.getElementById("controls");
+    const baseControlsRoot = document.getElementById("base-controls");
+    const optionControlsRoot = document.getElementById("option-controls");
     const controlHandles = {}; // 각 옵션 컨트롤에 접근하기 위한 핸들
 
-    function applyPreset(presetId, { syncControls = true } = {}) {
-        const preset = GAME_PRESETS[presetId];
-        if (!preset) return;
-
-        // config 갱신
-        config.direction = preset.direction;
-        config.speed = preset.speed;
-        config.sudden = preset.sudden;
-        config.hidden = preset.hidden;
-
-        // CSS 반영
-        applyCoverHeights();
-
-        // 기존 컨트롤 값도 preset에 맞게 변경
-        if (syncControls) {
-            controlHandles.direction?.setValue(config.direction);
-            controlHandles.speed?.setValue(config.speed);
-            controlHandles.sudden?.setValue(config.sudden);
-            controlHandles.hidden?.setValue(config.hidden);
+    function clearControls(root) {
+        root.innerHTML = "";
+        for (const k of Object.keys(controlHandles)) {
+            if (k.root == root) delete controlHandles[k];
         }
     }
 
-    function createNumericControl(def) {
+    function renderControlsForPreset(preset) {
+        const defs = buildOptionDefinitionsForPreset(preset);
+        defs.forEach((def) => {
+            if (def.type === "number")
+                createNumericControl(optionControlsRoot, def);
+            else if (def.type === "select")
+                createSelectControl(optionControlsRoot, def);
+        });
+    }
+
+    function makeConfigFromPreset(preset) {
+        const cfg = {};
+        for (const opt of preset.options) {
+            cfg[opt.id] = opt.defaultValue;
+        }
+        return cfg;
+    }
+
+    function buildOptionDefinitionsForPreset(preset) {
+        const defsFromJson = preset.options.map((o) => ({
+            ...o,
+            apply: applyMap[o.id],
+        }));
+
+        return [...defsFromJson];
+    }
+
+    function applyPreset(presetId) {
+        if (presetId === currentPresetId) return;
+        const preset = presetMap[presetId];
+        if (!preset) return;
+
+        currentPresetId = presetId;
+        currentPreset = preset;
+
+        // config를 preset의 defaultValue로 덮어쓰기
+        for (const opt of preset.options) {
+            config[opt.id] = opt.defaultValue;
+        }
+
+        applyCoverHeights();
+
+        clearControls(optionControlsRoot);
+        renderControlsForPreset(preset);
+    }
+
+    function makeApplyMap(config) {
+        return {
+            speed(value) {
+                config.speed = value;
+            },
+            sudden(value) {
+                config.sudden = value;
+                applyCoverHeights();
+            },
+            hidden(value) {
+                config.hidden = value;
+                applyCoverHeights();
+            },
+            direction(value) {
+                const v = parseInt(value, 10);
+                if (v === 1 || v === -1) config.direction = v;
+            },
+        };
+    }
+
+    function createNumericControl(root, def) {
         const wrapper = document.createElement("div");
         wrapper.className = "option-control";
 
@@ -316,7 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         row.append(decBtn, slider, incBtn, input);
         wrapper.append(label, row);
-        controlsRoot.appendChild(wrapper);
+        root.appendChild(wrapper);
 
         function applyFromValue(raw) {
             // 값 적용. 여러 컨트롤이 같이 변경되어야 하므로 함수로 관리
@@ -350,6 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 외부에서 값 세팅 가능하게 핸들 등록
         controlHandles[def.id] = {
+            root: root,
             setValue(v) {
                 applyFromValue(v);
             },
@@ -359,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
         applyFromValue(def.defaultValue);
     }
 
-    function createSelectControl(def) {
+    function createSelectControl(root, def) {
         const wrapper = document.createElement("div");
         wrapper.className = "option-control";
 
@@ -384,10 +427,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         wrapper.append(label, select);
-        controlsRoot.appendChild(wrapper);
+        root.appendChild(wrapper);
 
         // 외부에서 값 세팅 가능하게 핸들 등록
         controlHandles[def.id] = {
+            root: root,
             setValue(v) {
                 select.value = String(v);
                 def.apply(v);
@@ -398,84 +442,27 @@ document.addEventListener("DOMContentLoaded", () => {
         def.apply(def.defaultValue);
     }
 
-    // 현재 사용할 옵션 정의
-    const optionDefinitions = [
-        {
-            type: "select",
-            id: "gamePreset",
-            label: "Game Preset",
-            options: Object.values(GAME_PRESETS).map((p) => ({
-                value: p.id,
-                label: p.label,
-            })),
-            defaultValue: DEFAULT_PRESET_ID,
-            apply(value) {
-                applyPreset(value, { syncControls: true });
-            },
+    // 초기 옵션 컨트롤 렌더링
+    clearControls(optionControlsRoot);
+    clearControls(baseControlsRoot);
+    renderControlsForPreset(currentPreset);
+    createSelectControl(baseControlsRoot, {
+        type: "select",
+        id: "gamePreset",
+        label: "Game Preset",
+        options: Object.values(presetMap).map((p) => ({
+            value: p.id,
+            label: p.label,
+        })),
+        defaultValue: DEFAULT_PRESET_ID,
+        apply(value) {
+            applyPreset(value);
         },
-        {
-            type: "number",
-            id: "speed",
-            label: "Note Speed",
-            min: 0.5,
-            max: 10.0,
-            step: 0.5,
-            defaultValue: config.speed,
-            apply(value) {
-                config.speed = value;
-            },
-        },
-        {
-            type: "number",
-            id: "sudden",
-            label: "Sudden",
-            min: 0,
-            max: 100,
-            step: 1,
-            defaultValue: config.sudden,
-            apply(value) {
-                config.sudden = value;
-                applyCoverHeights();
-            },
-        },
-        {
-            type: "number",
-            id: "hidden",
-            label: "Hidden",
-            min: 0,
-            max: 100,
-            step: 1,
-            defaultValue: config.hidden,
-            apply(value) {
-                config.hidden = value;
-                applyCoverHeights();
-            },
-        },
-        {
-            type: "select",
-            id: "direction",
-            label: "Direction",
-            options: [
-                { value: 1, label: "Reverse" },
-                { value: -1, label: "Normal" },
-            ],
-            defaultValue: config.direction,
-            apply(value) {
-                const v = parseInt(value, 10);
-                if (v === 1 || v === -1) {
-                    config.direction = v;
-                }
-            },
-        },
-    ];
-
-    optionDefinitions.forEach((def) => {
-        if (def.type === "number") {
-            createNumericControl(def);
-        } else if (def.type === "select") {
-            createSelectControl(def);
-        }
     });
 
     requestAnimationFrame(loop);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    init().catch(console.error);
 });

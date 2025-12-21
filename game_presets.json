@@ -1,0 +1,103 @@
+{
+    "defaultPresetId": "default5",
+    "presets": [
+        {
+            "id": "default5",
+            "label": "Default 5-key",
+            "options": [
+                {
+                    "type": "number",
+                    "id": "speed",
+                    "label": "Note Speed",
+                    "min": 0.5,
+                    "max": 10.0,
+                    "step": 0.5,
+                    "defaultValue": 0.5
+                },
+                {
+                    "type": "number",
+                    "id": "sudden",
+                    "label": "Sudden",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 15
+                },
+                {
+                    "type": "number",
+                    "id": "hidden",
+                    "label": "Hidden",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 15
+                },
+                {
+                    "type": "select",
+                    "id": "direction",
+                    "label": "Direction",
+                    "options": [
+                        {
+                            "value": 1,
+                            "label": "Reverse"
+                        },
+                        {
+                            "value": -1,
+                            "label": "Normal"
+                        }
+                    ],
+                    "defaultValue": 1
+                }
+            ]
+        },
+        {
+            "id": "fast5",
+            "label": "Fast 5-key",
+            "options": [
+                {
+                    "type": "number",
+                    "id": "speed",
+                    "label": "Note Speed",
+                    "min": 0.5,
+                    "max": 10.0,
+                    "step": 0.5,
+                    "defaultValue": 0.9
+                },
+                {
+                    "type": "number",
+                    "id": "sudden",
+                    "label": "Sudden",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 10
+                },
+                {
+                    "type": "number",
+                    "id": "hidden",
+                    "label": "Hidden",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 10
+                },
+                {
+                    "type": "select",
+                    "id": "direction",
+                    "label": "Direction",
+                    "options": [
+                        {
+                            "value": 1,
+                            "label": "Reverse"
+                        },
+                        {
+                            "value": -1,
+                            "label": "Normal"
+                        }
+                    ],
+                    "defaultValue": 1
+                }
+            ]
+        }
+    ]
+}
