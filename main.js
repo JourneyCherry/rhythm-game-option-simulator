@@ -1,4 +1,4 @@
-import * as Control from "view/Options.mjs";
+import * as Option from "./views/Options.mjs";
 
 async function loadPresets() {
     const res = await fetch("./game_presets.json", { cache: "no-store" });
@@ -25,10 +25,10 @@ async function init() {
     );
 
     const DEFAULT_PRESET_ID = presetData.defaultPresetId;
-    currentPresetId = DEFAULT_PRESET_ID;
-    currentPreset = presetMap[currentPresetId];
+    let currentPresetId = DEFAULT_PRESET_ID;
+    let currentPreset = presetMap[currentPresetId];
 
-    config = makeConfigFromPreset(currentPreset);
+    let config = makeConfigFromPreset(currentPreset);
 
     const applyMap = makeApplyMap(config);
 
@@ -241,18 +241,15 @@ async function init() {
     // --------------------
     // 공통 옵션 컨트롤 컴포넌트
     // --------------------
-
-    const baseControlsRoot = document.getElementById("base-controls");
-    const optionControlsRoot = document.getElementById("option-controls");
-    const controlHandles = {}; // 각 옵션 컨트롤에 접근하기 위한 핸들
+    Option.init();
 
     function renderControlsForPreset(preset) {
         const defs = buildOptionDefinitionsForPreset(preset);
         defs.forEach((def) => {
             if (def.type === "number")
-                Control.createNumericControl(optionControlsRoot, def);
+                Option.createNumericControl(Option.RootType.OPTION, def);
             else if (def.type === "select")
-                Control.createSelectControl(optionControlsRoot, def);
+                Option.createSelectControl(Option.RootType.OPTION, def);
         });
     }
 
@@ -288,7 +285,7 @@ async function init() {
 
         applyCoverHeights();
 
-        Control.clearControls(optionControlsRoot);
+        Option.clearControls(Option.RootType.OPTION);
         renderControlsForPreset(preset);
     }
 
@@ -313,10 +310,10 @@ async function init() {
     }
 
     // 초기 옵션 컨트롤 렌더링
-    Control.clearControls(optionControlsRoot);
-    Control.clearControls(baseControlsRoot);
+    Option.clearControls(Option.RootType.OPTION);
+    Option.clearControls(Option.RootType.BASE);
     renderControlsForPreset(currentPreset);
-    Control.createSelectControl(baseControlsRoot, {
+    Option.createSelectControl(Option.RootType.BASE, {
         type: "select",
         id: "gamePreset",
         label: "Game Preset",

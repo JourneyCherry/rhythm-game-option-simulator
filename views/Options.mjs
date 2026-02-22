@@ -1,11 +1,28 @@
-export function clearControls(root) {
-    root.innerHTML = "";
-    for (const k of Object.keys(controlHandles)) {
-        if (k.root == root) delete controlHandles[k];
+export const RootType = Object.freeze({
+    // 각 옵션 컨트롤을 표시할 Root Element의 id 이름
+    BASE: "base-controls",
+    OPTION: "option-controls",
+});
+const controlRoots = {}; // 각 옵션 컨트롤을 표시할 Root Elements
+const controlHandles = {}; // 각 옵션 컨트롤에 접근하기 위한 핸들
+
+export function init() {
+    controlRoots[RootType.BASE] = document.getElementById(RootType.BASE);
+    controlRoots[RootType.OPTION] = document.getElementById(RootType.OPTION);
+
+    for (const type of Object.values(RootType)) {
+        clearControls(type);
     }
 }
 
-export function createNumericControl(root, def) {
+export function clearControls(rootType) {
+    controlRoots[rootType].innerHTML = "";
+    for (const k of Object.keys(controlHandles)) {
+        if (k.rootType == rootType) delete controlHandles[k];
+    }
+}
+
+export function createNumericControl(rootType, def) {
     const wrapper = document.createElement("div");
     wrapper.className = "option-control";
 
@@ -46,7 +63,7 @@ export function createNumericControl(root, def) {
 
     row.append(decBtn, slider, incBtn, input);
     wrapper.append(label, row);
-    root.appendChild(wrapper);
+    controlRoots[rootType].appendChild(wrapper);
 
     function applyFromValue(raw) {
         // 값 적용. 여러 컨트롤이 같이 변경되어야 하므로 함수로 관리
@@ -80,7 +97,7 @@ export function createNumericControl(root, def) {
 
     // 외부에서 값 세팅 가능하게 핸들 등록
     controlHandles[def.id] = {
-        root: root,
+        rootType: rootType,
         setValue(v) {
             applyFromValue(v);
         },
@@ -90,7 +107,7 @@ export function createNumericControl(root, def) {
     applyFromValue(def.defaultValue);
 }
 
-export function createSelectControl(root, def) {
+export function createSelectControl(rootType, def) {
     const wrapper = document.createElement("div");
     wrapper.className = "option-control";
 
@@ -115,11 +132,11 @@ export function createSelectControl(root, def) {
     });
 
     wrapper.append(label, select);
-    root.appendChild(wrapper);
+    controlRoots[rootType].appendChild(wrapper);
 
     // 외부에서 값 세팅 가능하게 핸들 등록
     controlHandles[def.id] = {
-        root: root,
+        rootType: rootType,
         setValue(v) {
             select.value = String(v);
             def.apply(v);
