@@ -74,7 +74,7 @@ export function createNumericControl(rootType, def) {
 
         slider.value = String(v);
         input.value = String(v);
-        def.apply(v);
+        def.apply(def.id, v);
     }
 
     slider.addEventListener("input", () => {
@@ -128,7 +128,7 @@ export function createSelectControl(rootType, def) {
     select.value = String(def.defaultValue);
 
     select.addEventListener("change", () => {
-        def.apply(select.value);
+        def.apply(def.id, select.value);
     });
 
     wrapper.append(label, select);
@@ -139,10 +139,25 @@ export function createSelectControl(rootType, def) {
         rootType: rootType,
         setValue(v) {
             select.value = String(v);
-            def.apply(v);
+            def.apply(def.id, v);
         },
     };
 
     // 초기값 설정
-    def.apply(def.defaultValue);
+    def.apply(def.id, def.defaultValue);
+}
+
+const controlCreateMap = {
+    number: createNumericControl,
+    select: createSelectControl,
+};
+
+export function renderControlsForPreset(preset, callback) {
+    const defs = preset.options.map((o) => ({
+        ...o,
+        apply: callback, // 옵션 값이 변경될 때 호출될 콜백 함수
+    }));
+    defs.forEach((def) => {
+        controlCreateMap[def.type]?.(RootType.OPTION, def);
+    });
 }

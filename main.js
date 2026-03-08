@@ -19,6 +19,7 @@ async function init() {
         ? 0.8
         : judgeLinePercent / 100;
 
+    //TODO : Preset.mjs에서 로드하기
     const presetData = await loadPresets();
     const presetMap = Object.fromEntries(
         presetData.presets.map((p) => [p.id, p]),
@@ -28,10 +29,31 @@ async function init() {
     let currentPresetId = DEFAULT_PRESET_ID;
     let currentPreset = presetMap[currentPresetId];
 
+    //TODO : Preview.mjs로 보내기. 그리는데 사용됨.
     let config = makeConfigFromPreset(currentPreset);
 
-    const applyMap = makeApplyMap(config);
+    //TODO : Preview.mjs에서 update()메소드에서 처리하기
+    function applyCallback(id, value) {
+        switch (id) {
+            case "speed":
+                config.speed = value;
+                break;
+            case "sudden":
+                config.sudden = value;
+                applyCoverHeights();
+                break;
+            case "hidden":
+                config.hidden = value;
+                applyCoverHeights();
+                break;
+            case "direction":
+                const v = parseInt(value, 10);
+                if (v === 1 || v === -1) config.direction = v;
+                break;
+        }
+    }
 
+    //TODO : Preview.mjs로 보내기. 그리는데 사용됨
     function applyCoverHeights() {
         document.documentElement.style.setProperty(
             "--cover-top-height",
@@ -243,31 +265,12 @@ async function init() {
     // --------------------
     Option.init();
 
-    function renderControlsForPreset(preset) {
-        const defs = buildOptionDefinitionsForPreset(preset);
-        defs.forEach((def) => {
-            if (def.type === "number")
-                Option.createNumericControl(Option.RootType.OPTION, def);
-            else if (def.type === "select")
-                Option.createSelectControl(Option.RootType.OPTION, def);
-        });
-    }
-
     function makeConfigFromPreset(preset) {
         const cfg = {};
         for (const opt of preset.options) {
             cfg[opt.id] = opt.defaultValue;
         }
         return cfg;
-    }
-
-    function buildOptionDefinitionsForPreset(preset) {
-        const defsFromJson = preset.options.map((o) => ({
-            ...o,
-            apply: applyMap[o.id],
-        }));
-
-        return [...defsFromJson];
     }
 
     function applyPreset(presetId) {
@@ -286,33 +289,13 @@ async function init() {
         applyCoverHeights();
 
         Option.clearControls(Option.RootType.OPTION);
-        renderControlsForPreset(preset);
-    }
-
-    function makeApplyMap(config) {
-        return {
-            speed(value) {
-                config.speed = value;
-            },
-            sudden(value) {
-                config.sudden = value;
-                applyCoverHeights();
-            },
-            hidden(value) {
-                config.hidden = value;
-                applyCoverHeights();
-            },
-            direction(value) {
-                const v = parseInt(value, 10);
-                if (v === 1 || v === -1) config.direction = v;
-            },
-        };
+        Option.renderControlsForPreset(preset, applyCallback);
     }
 
     // 초기 옵션 컨트롤 렌더링
     Option.clearControls(Option.RootType.OPTION);
     Option.clearControls(Option.RootType.BASE);
-    renderControlsForPreset(currentPreset);
+    Option.renderControlsForPreset(currentPreset, applyCallback);
     Option.createSelectControl(Option.RootType.BASE, {
         type: "select",
         id: "gamePreset",
