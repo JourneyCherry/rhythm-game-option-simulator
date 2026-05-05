@@ -1,15 +1,15 @@
 // eslint.config.mjs
+import globals from "globals";
+
 export default [
     {
         files: ["**/*.js", "**/*.mjs"],
+        ignores: ["node_modules/**"],
         languageOptions: {
             ecmaVersion: "latest",
             sourceType: "module",
             globals: {
-                window: "readonly",
-                document: "readonly",
-                console: "readonly",
-                ...globals.browser, // 브라우저 내장 API 전체 포함
+                ...globals.browser,
             },
         },
         rules: {
