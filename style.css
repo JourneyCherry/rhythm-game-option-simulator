@@ -1,185 +1,824 @@
 /* ====================
-   Global CSS Variables
+   CSS Variables
    ==================== */
 :root {
-    /* 전체 플레이 화면 관련 */
-    --playfield-width-vw: 60; /* viewport width 기준 비율 */
-    --playfield-max-width: 900px;
+    /* 프리뷰 비율 (JS로 덮어씀) */
+    --preview-aspect: calc(16 / 9);
 
-    /* 노트 라인 영역(5라인 전체)의 가로 폭 비율 */
-    --lane-area-width: 20%; /* playfield 가로 대비 20% */
+    /* 레이아웃 */
+    --title-bar-height: 36px;
+    --options-panel-width: 260px;
+    --analysis-panel-width: 180px;
+    --top-bar-height: 52px;
+    --mobile-tab-bar-height: 52px;
+    --footer-height: auto;
+
+    /* 플레이 화면 */
+    --lane-area-width: 20%;
     --lane-area-left: 50%;
     --lane-area-translate-x: -50%;
-
-    /* 라인 테두리 두께 */
-    --lane-outer-border-thick: 3px; /* 양 끝 굵은 선 */
-    --lane-inner-border-thin: 1px; /* 내부 구분선 */
-
-    /* 서든/히든 가림 박스 관련 */
+    --lane-outer-border-thick: 3px;
+    --lane-inner-border-thin: 1px;
     --cover-top-height: 15%;
     --cover-bottom-height: 15%;
-
-    /* 판정 라인 위치/두께 (세로 방향) */
-    --judgeline-position: 80%; /* playfield 높이 대비 위치 (대략 아래쪽 20%) */
-    --judgeline-thickness: 0.6%; /* 판정선 두께 */
-
-    /* 노트/박자선/마디선 관련 */
-    --note-height: 0.6%; /* 노트 세로 높이 */
-
+    --judgeline-position: 80%;
+    --judgeline-thickness: 0.6%;
+    --note-height: 0.6%;
     --beatline-height: 0.4%;
     --beatline-color: rgba(255, 255, 255, 0.5);
-
     --barline-height: 0.8%;
     --barline-color: rgba(255, 255, 255, 0.9);
 
     /* 색상 */
     --color-bg-body: #111;
-    --color-bg-header: #222;
+    --color-bg-panel: #1a1a1a;
+    --color-bg-top-bar: #1e1e1e;
+    --color-bg-footer: #181818;
     --color-text-main: #eee;
-    --color-text-header: #fff;
+    --color-text-muted: #999;
+    --color-border: #333;
     --color-border-playfield: #555;
     --color-line-outer: rgba(255, 255, 255, 0.8);
     --color-line-inner: rgba(255, 255, 255, 0.4);
+
+    /* 칩 */
+    --color-chip-bg: #2a2a2a;
+    --color-chip-hover: #333;
+    --color-chip-selected: #3b7fe8;
+    --color-chip-border: #444;
+
+    /* 모달 */
+    --color-modal-overlay: rgba(0, 0, 0, 0.75);
+    --color-modal-bg: #222;
+    --color-modal-border: #3a3a3a;
+
+    /* 탭 바 */
+    --color-tab-bar-bg: #1a1a1a;
+    --color-tab-active: #3b7fe8;
+    --color-tab-inactive: #666;
 }
 
-/* =========================
-   Layout & Base
-   ========================= */
+/* ====================
+   Reset & Base
+   ==================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
     padding: 0;
-    font-family: sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--color-bg-body);
+    color: var(--color-text-main);
+    overflow-x: hidden;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* ====================
+   App Shell (Desktop ≥ 1024px)
+   ==================== */
+
+.app {
+    min-height: 100dvh;
+}
+
+/* dock-side: 옵션이 왼쪽에 */
+@media (min-width: 1024px) {
+    .app.dock-side {
+        display: grid;
+        grid-template-areas:
+            "title   title    title"
+            "header  header   header"
+            "options preview  analysis"
+            "footer  footer   footer";
+        grid-template-columns: var(--options-panel-width) 1fr var(--analysis-panel-width);
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    /* dock-bottom: 옵션이 하단에 */
+    .app.dock-bottom {
+        display: grid;
+        grid-template-areas:
+            "title   title    title"
+            "header  header   header"
+            ".       preview  analysis"
+            "options options  options"
+            "footer  footer   footer";
+        grid-template-columns: 60px 1fr var(--analysis-panel-width);
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto auto;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    #title-bar {
+        grid-area: title;
+    }
+    #top-bar {
+        grid-area: header;
+    }
+    #options-panel {
+        grid-area: options;
+    }
+    #preview-area {
+        grid-area: preview;
+    }
+    #analysis-panel {
+        grid-area: analysis;
+    }
+    #footer-area {
+        grid-area: footer;
+    }
+
+    /* 모바일 전용 요소 숨김 */
+    #setup-panel,
+    #bms-panel,
+    #mobile-tab-bar {
+        display: none !important;
+    }
+}
+
+/* ====================
+   Tablet (768px – 1023px)
+   ==================== */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .app.dock-bottom {
+        display: grid;
+        grid-template-areas:
+            "title   title    title"
+            "header  header   header"
+            ".       preview  analysis"
+            "options options  options"
+            "footer  footer   footer";
+        grid-template-columns: 0 1fr var(--analysis-panel-width);
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto auto;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .app.dock-side {
+        display: grid;
+        grid-template-areas:
+            "title   title"
+            "header  header"
+            "preview analysis"
+            "footer  footer";
+        grid-template-columns: 1fr var(--analysis-panel-width);
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    #title-bar {
+        grid-area: title;
+    }
+    #top-bar {
+        grid-area: header;
+    }
+    #preview-area {
+        grid-area: preview;
+    }
+    #analysis-panel {
+        grid-area: analysis;
+    }
+    #footer-area {
+        grid-area: footer;
+    }
+
+    /* dock-bottom: 옵션 패널 그리드 배치 */
+    .app.dock-bottom #options-panel {
+        grid-area: options;
+    }
+
+    /* dock-side: 옵션 패널 슬라이드-인 오버레이 */
+    .app.dock-side #options-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 260px;
+        z-index: 200;
+        background: var(--color-bg-panel);
+        border-right: 1px solid var(--color-border);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        overflow-y: auto;
+    }
+
+    .app.dock-side #options-panel.sidebar-open {
+        transform: translateX(0);
+    }
+
+    #setup-panel,
+    #bms-panel,
+    #mobile-tab-bar {
+        display: none !important;
+    }
+}
+
+/* ====================
+   Mobile (< 768px)
+   ==================== */
+
+@media (max-width: 767px) {
+    .app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+        padding-bottom: var(--mobile-tab-bar-height);
+    }
+
+    #preview-area {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        /* playfield-wrapper의 flex:1이 동작하려면 부모에 명시적 높이 필요.
+           CSS 마지막 선언 우선 — svh 지원 브라우저는 svh가, 미지원은 vh가 적용됨. */
+        height: 42vh;
+        height: 42svh;
+        max-height: 55vh;
+        max-height: 55svh;
+        flex-shrink: 0;
+        background: var(--color-bg-body);
+    }
+
+    /* 탭 패널 기본: 숨김 */
+    .tab-panel {
+        display: none;
+    }
+
+    /*
+     * #options-panel / #analysis-panel 에는 전역 CSS에서 ID 선택자로 display: flex 가 설정됨.
+     * ID 선택자(1,0,0) > 클래스 선택자(0,1,0) 이므로 .tab-panel { display: none } 만으로는 숨겨지지 않음.
+     * :not(.tab-active) 를 붙여 specificity를 (1,1,0) 으로 높여 전역 스타일을 재정의.
+     */
+    #options-panel:not(.tab-active),
+    #analysis-panel:not(.tab-active) {
+        display: none;
+        border: none;
+    }
+
+    /* 활성 탭 패널: ID 선택자 + 클래스로 specificity (1,1,0) 확보 */
+    #options-panel.tab-active,
+    #analysis-panel.tab-active,
+    #bms-panel.tab-active {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        border: none;
+    }
+
+    /* BMS 탭: 토글 버튼 숨기고 본문 항상 펼침 */
+    #mobile-bms .bms-toggle {
+        display: none;
+    }
+
+    #mobile-bms .bms-body,
+    #mobile-bms .bms-body.collapsed {
+        display: flex;
+        max-height: none;
+        padding: 12px;
+    }
+
+    #mobile-bms .bms-textarea {
+        flex: 1;
+        resize: none;
+        min-height: 120px;
+    }
+
+    #footer-area {
+        display: none;
+    }
+
+    /* 모바일: 셋업 탭 제거로 TopBar에서 게임 선택 드롭다운을 표시 */
+    .game-selector {
+        display: block;
+    }
+
+    .top-bar-game-name {
+        display: none;
+    }
+
+    #mobile-tab-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+    }
+}
+
+/* ====================
+   Title Bar
+   ==================== */
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    height: var(--title-bar-height);
+    background: #141414;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.app-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.title-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.title-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--color-text-muted);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.title-btn:hover {
+    background: #2a2a2a;
+    border-color: var(--color-border);
     color: var(--color-text-main);
 }
 
-header {
-    padding: 16px;
-    background: var(--color-bg-header);
-    color: var(--color-text-header);
-}
+/* ====================
+   Top Bar
+   ==================== */
 
-.layout {
+.top-bar {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 16px;
+    gap: 8px;
+    padding: 0 12px;
+    background: var(--color-bg-top-bar);
+    border-bottom: 1px solid var(--color-border);
+    height: var(--top-bar-height);
+    flex-shrink: 0;
 }
 
-/* 옵션 UI 영역 */
-#controls {
-    width: 100%;
-    max-width: 960px;
-    padding: 12px 16px;
-    box-sizing: border-box;
-
+.top-bar-left {
     display: flex;
-    flex-wrap: wrap;
-    gap: 12px 24px;
-
-    background: #1a1a1a;
-    border-radius: 8px;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
 }
 
-.option-control {
-    display: flex;
-    flex-direction: column;
-    min-width: 260px;
-    max-width: 320px;
-}
-
-.option-label {
-    font-size: 0.9rem;
-    margin-bottom: 4px;
-    color: #ddd;
-}
-
-.option-row {
+.top-bar-right {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
 }
 
-.option-btn:hover {
-    background: #444;
+.hamburger-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-main);
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.hamburger-btn:hover {
+    background: #2a2a2a;
+}
+
+/* 데스크톱에서 햄버거 숨김 */
+@media (min-width: 1024px) {
+    .hamburger-btn {
+        display: none;
+    }
+    /* dock-side 태블릿에서만 보임은 미디어쿼리로 처리됨 */
+}
+
+/* dock-bottom 태블릿/데스크톱에서도 햄버거 숨김 */
+@media (min-width: 768px) {
+    .app.dock-bottom .hamburger-btn {
+        display: none;
+    }
+}
+
+/* 모바일: 햄버거 불필요 (탭 바로 패널 전환) — 전역 스타일 이후에 선언해야 적용됨 */
+@media (max-width: 767px) {
+    .hamburger-btn {
+        display: none;
+    }
+}
+
+.top-bar-game-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 데스크톱/태블릿: 게임명 텍스트 숨김, 셀렉트 표시 */
+@media (min-width: 768px) {
+    .top-bar-game-name {
+        display: none;
+    }
+}
+
+.game-selector {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-select {
+    width: 100%;
+    max-width: 220px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.game-select:focus {
+    outline: 2px solid var(--color-chip-selected);
+    outline-offset: 1px;
+}
+
+
+.monitor-info-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.monitor-info-btn:hover {
+    background: #333;
+    color: var(--color-text-main);
+}
+
+.gear-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-main);
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gear-btn:hover {
+    background: #2a2a2a;
+}
+
+/* ====================
+   Options Panel
+   ==================== */
+
+#options-panel {
+    background: var(--color-bg-panel);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* flex 자식이 부모 높이 초과하지 않도록 */
+}
+
+.app.dock-bottom #options-panel {
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.options-panel-inner {
+    flex: 1;
+    min-height: 0; /* rows: 세로 스크롤을 위해 필요 */
+    min-width: 0;
+}
+
+/* rows 레이아웃 */
+.options-panel-inner.layout-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    overflow-y: auto;
+}
+
+.options-panel-inner.layout-rows .option-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+}
+
+.options-panel-inner.layout-rows .option-label {
+    width: 80px;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.options-panel-inner.layout-rows .option-control-area {
+    flex: 1;
+    min-width: 0;
+}
+
+/* cols 레이아웃 */
+.options-panel-inner.layout-cols {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: flex-start;
+}
+
+.options-panel-inner.layout-cols .option-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 72px;
+}
+
+.options-panel-inner.layout-cols .option-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.options-panel-inner.layout-cols .option-control-area {
+    width: 100%;
+}
+
+/* ====================
+   칩 (Chip) 컨트롤
+   ==================== */
+
+.chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.options-panel-inner.layout-cols .chip-list {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.chip {
+    padding: 4px 12px;
+    border-radius: 99px;
+    border: 1px solid var(--color-chip-border);
+    background: var(--color-chip-bg);
+    color: var(--color-text-main);
+    font-size: 0.82rem;
+    white-space: nowrap;
+    transition:
+        background 0.12s,
+        border-color 0.12s;
+    line-height: 1.4;
+}
+
+.chip:hover {
+    background: var(--color-chip-hover);
+    border-color: #666;
+}
+
+.chip.selected {
+    background: var(--color-chip-selected);
+    border-color: var(--color-chip-selected);
+    color: #fff;
+}
+
+/* cols 레이아웃 칩: 가운데 정렬 */
+.options-panel-inner.layout-cols .chip {
+    text-align: center;
+    padding: 5px 8px;
+    border-radius: 6px;
+}
+
+/* ====================
+   Range 컨트롤
+   ==================== */
+
+.range-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.range-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.range-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    border: 1px solid var(--color-chip-border);
+    background: var(--color-chip-bg);
+    color: var(--color-text-main);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+.range-btn:hover {
+    background: var(--color-chip-hover);
 }
 
 .option-slider {
     flex: 1;
+    min-width: 0;
+    accent-color: var(--color-chip-selected);
+    height: 4px;
 }
 
-.option-input {
-    width: 70px;
-    padding: 3px 6px;
-    border-radius: 4px;
-    border: 1px solid #555;
-    background: #222;
-    color: #eee;
+.range-value {
+    min-width: 38px;
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--color-text-main);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 
-.option-select {
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid #555;
-    background: #222;
-    color: #eee;
+/* cols 레이아웃 range: 세로 슬라이더 */
+.options-panel-inner.layout-cols .range-control {
+    align-items: center;
 }
 
-/* 플레이 화면 컨테이너: 중앙 정렬 */
+.options-panel-inner.layout-cols .range-row {
+    flex-direction: column;
+    gap: 4px;
+}
 
-#playfield-container {
+.options-panel-inner.layout-cols .option-slider {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 4px;
+    height: 80px;
+    flex: none;
+}
+
+.options-panel-inner.layout-cols .range-value {
+    text-align: center;
+    min-width: auto;
+}
+
+.options-panel-inner.layout-cols .range-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 0.85rem;
+}
+
+/* ====================
+   Preview Area
+   ==================== */
+
+#preview-area {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+.playfield-wrapper {
+    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    padding: 24px 0;
+    min-height: 0;
+    overflow: hidden;
+    /* container query로 자식 크기 계산에 사용 */
+    container-type: size;
 }
-
-/* 실제 플레이 화면(프리뷰): 16:9 비율, 중앙 */
 
 #playfield {
     position: relative;
-    aspect-ratio: 16 / 9;
-    width: calc(var(--playfield-width-vw) * 1vw);
-    max-width: var(--playfield-max-width);
+    /*
+     * container query 단위(cqw/cqh)로 letterbox 계산:
+     * - 가로 크기: min(컨테이너 너비, 컨테이너 높이 × aspect)
+     * - 세로 크기: min(컨테이너 높이, 컨테이너 너비 ÷ aspect)
+     * aspect-ratio 단독으로는 flex 컨텍스트에서 크기가 0이 되므로 명시적으로 지정
+     */
+    width: min(100cqw, calc(100cqh * var(--preview-aspect)));
+    height: min(100cqh, calc(100cqw / var(--preview-aspect)));
     background: #000;
-    border: 2px solid var(--color-border-playfield);
-    box-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--color-border-playfield);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
     overflow: hidden;
 }
 
-/* 노트 라인 5개 */
+/* 재생 컨트롤 */
+.playback-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px;
+    background: var(--color-bg-panel);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.ctrl-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    font-size: 0.95rem;
+}
+
+.ctrl-btn:hover:not(:disabled) {
+    background: #333;
+}
+
+.ctrl-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+/* 플레이 화면 내부 요소 (Preview.mjs에서 사용) */
 
 .note-lanes {
     position: absolute;
     top: 0;
     bottom: 0;
-
     width: var(--lane-area-width);
     left: var(--lane-area-left);
     transform: translateX(var(--lane-area-translate-x));
-
     display: flex;
-
-    /* 최외곽 세로선 */
     border-left: var(--lane-outer-border-thick) solid var(--color-line-outer);
     border-right: var(--lane-outer-border-thick) solid var(--color-line-outer);
 }
 
 .lane {
     flex: 1;
-
-    /* 내부 노트 구분선 */
     border-right: var(--lane-inner-border-thin) solid var(--color-line-inner);
 }
 
-/* 마지막 lane 오른쪽에는 내부선을 그리지 않음 (이미 note-lanes 오른쪽 border가 있음) */
 .lane:last-child {
     border-right: none;
 }
 
-/* 판정선 */
 #judgeline {
     position: absolute;
     width: var(--lane-area-width);
@@ -203,7 +842,6 @@ header {
     z-index: 10;
 }
 
-/* 노트 샘플 */
 .note {
     position: absolute;
     width: calc(100% / 5);
@@ -211,7 +849,6 @@ header {
     border-radius: 4px;
 }
 
-/* 박자선/마디선 */
 .timing-line {
     position: absolute;
     width: 100%;
@@ -227,37 +864,492 @@ header {
     background: var(--barline-color);
 }
 
-/* 위/아래 가림 상자 (Sudden/Hidden 영역용) */
-
 .cover {
     position: absolute;
-
-    /* 노트 라인 영역과 동일한 폭 & 위치 */
     width: var(--lane-area-width);
     left: var(--lane-area-left);
     transform: translateX(var(--lane-area-translate-x));
-
     background: #000;
-    opacity: 1;
     pointer-events: none;
-
     z-index: 20;
 }
-
-/* 기본 높이는 대략 15% 정도. 나중에 JS로 height만 바꾸면 됨 */
 
 .cover-top {
     top: 0;
     height: var(--cover-top-height);
-
-    /* 경계선: 어디까지 가려졌는지 표시용 */
     border-bottom: 2px solid var(--color-line-outer);
 }
 
 .cover-bottom {
     bottom: 0;
     height: var(--cover-bottom-height);
-
-    /* 경계선: 어디까지 가려졌는지 표시용 */
     border-top: 2px solid var(--color-line-outer);
+}
+
+/* ====================
+   Analysis Panel
+   ==================== */
+
+#analysis-panel {
+    background: var(--color-bg-panel);
+    border-left: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.app.dock-bottom #analysis-panel {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+}
+
+.analysis-panel-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.panel-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 12px 4px;
+    flex-shrink: 0;
+}
+
+.analysis-card {
+    background: #222;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.card-label {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+}
+
+.card-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+
+.card-unit {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+/* 모바일: 2열 그리드 */
+@media (max-width: 767px) {
+    .analysis-panel-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 12px;
+        align-content: start;
+    }
+}
+
+/* ====================
+   Footer (BMS Input 토글)
+   ==================== */
+
+.footer-area {
+    background: var(--color-bg-footer);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.bms-input-section {
+    width: 100%;
+}
+
+.bms-toggle {
+    width: 100%;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    text-align: left;
+    border-bottom: 1px solid transparent;
+    transition: color 0.12s;
+}
+
+.bms-toggle:hover {
+    color: var(--color-text-main);
+}
+
+.bms-toggle.open {
+    border-bottom-color: var(--color-border);
+    color: var(--color-text-main);
+}
+
+.bms-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    max-height: 180px;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+
+.bms-body.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.bms-textarea {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-main);
+    font-family: monospace;
+    font-size: 0.82rem;
+    padding: 8px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.bms-textarea:focus {
+    outline: 2px solid var(--color-chip-selected);
+    outline-offset: 1px;
+}
+
+.bms-apply-btn {
+    align-self: flex-end;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-chip-selected);
+    background: var(--color-chip-selected);
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+.bms-apply-btn:hover {
+    background: #4d8ff0;
+}
+
+/* ====================
+   Mobile Setup Panel
+   ==================== */
+
+.setup-section {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.setup-section:last-child {
+    border-bottom: none;
+}
+
+.setup-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.setup-monitor-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    text-align: left;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.setup-monitor-btn:hover {
+    background: #333;
+}
+
+.setup-monitor-btn .gear-icon {
+    color: var(--color-text-muted);
+}
+
+/* ====================
+   Mobile Tab Bar
+   ==================== */
+
+.mobile-tab-bar {
+    background: var(--color-tab-bar-bg);
+    border-top: 1px solid var(--color-border);
+    height: var(--mobile-tab-bar-height);
+    align-items: stretch;
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--color-tab-inactive);
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 0;
+    transition: color 0.12s;
+}
+
+.tab-btn.active {
+    color: var(--color-tab-active);
+}
+
+.tab-btn-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.tab-btn-label {
+    font-size: 0.68rem;
+}
+
+/* ====================
+   Sidebar Backdrop (Tablet)
+   ==================== */
+
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+}
+
+.sidebar-backdrop.active {
+    display: block;
+}
+
+/* ====================
+   Monitor Settings Modal
+   ==================== */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--color-modal-overlay);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-dialog {
+    background: var(--color-modal-bg);
+    border: 1px solid var(--color-modal-border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90dvh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-modal-border);
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.2rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-btn:hover:not(:disabled) {
+    background: #333;
+    color: var(--color-text-main);
+}
+
+.modal-close-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.modal-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-modal-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.field-sep {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+.modal-input {
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.modal-input:focus {
+    outline: 2px solid var(--color-chip-selected);
+    outline-offset: 1px;
+}
+
+.modal-input.narrow {
+    width: 90px;
+    flex-shrink: 0;
+}
+
+.modal-select {
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    width: 100%;
+    cursor: pointer;
+}
+
+.aspect-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.aspect-display {
+    font-size: 0.9rem;
+    color: var(--color-text-main);
+    min-width: 60px;
+}
+
+.aspect-override-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.modal-divider {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 2px 0;
+}
+
+.btn-primary {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    background: var(--color-chip-selected);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background: #4d8ff0;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: #2a2a2a;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+    background: #333;
+}
+
+/* ====================
+   Scrollbar (Webkit)
+   ==================== */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4a4a4a;
 }

@@ -19,6 +19,7 @@
     },
     "homepage": "https://github.com/JourneyCherry/rhythm-game-option-simulator#readme",
     "devDependencies": {
-        "eslint": "^9.39.1"
+        "eslint": "^9.39.1",
+        "globals": "^17.6.0"
     }
 }
