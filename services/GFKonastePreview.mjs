@@ -10,11 +10,13 @@ const PROFILE = {
     buttonRight: 1071, // 5버튼 영역 우측 경계
     wailingRight: 1138.5, // 웨일링 영역 우측 경계
     laneTop: 104,
-    noteSpawnY: 155, // Reverse 기준 노트 최초 등장 Y
+    noteSpawnYReverse: 155, // Reverse 기준 노트 최초 등장(첫 노출) Y
+    noteSpawnYNormal: 1001, // Normal 기준 노트 최초 등장(첫 노출) Y
     laneBottom: 1080,
 
-    // 판정선 (Reverse 기준)
-    judgeLineYReverse: 926,
+    // 판정선
+    judgeLineYReverse: 926, // Reverse 기준 판정선 Y
+    judgeLineYNormal: 233, // Normal 기준 판정선 Y
     judgeLineThickness: 7.5, // 판정선 외부 높이 (px)
     judgeLineStrokeWidth: 2, // 판정선 테두리 두께 (px)
 
@@ -38,6 +40,43 @@ const PROFILE = {
     // noteOffset 1단위 = 실제로 0.4프레임 더 늦게 쳐야 함
     offsetPerUnitFrames: 0.4,
     baseNoteOffset: 5, // 기본 노트 표시 타이밍 (옵션 단위). noteOffset에 항상 더해짐. 5 × 0.4 = 2프레임 당김.
+
+    // ── 프레임/HUD (옵션과 무관한 고정 구조. 값은 임시 추정치, 추후 실측 보정 예정) ──
+
+    // 레인 좌우 얇은 프레임 (레인 세로 전체 길이만큼 laneTop~laneBottom)
+    laneFrameThickness: 12, // 좌우 얇은 프레임 두께 (px)
+    laneFrameColor: "#3a4a5a",
+
+    // 프레이즈 표시용 프레임 (우측 얇은 프레임 바로 오른쪽, 훨씬 두꺼움).
+    // 화면 최상단(Y=0)~laneBottom까지 걸쳐 있다(실제 프레이즈 표시는 레인 영역 부근).
+    phraseFrameThickness: 112, // 두꺼운 세로 프레임 두께 (px)
+    phraseFrameColor: "#2a3340",
+
+    // 상단 HUD 패널. 화면 최상단(Y=0)~레인 시작(laneTop)에 빈틈없이 붙는다.
+    // 좌우 너비는 레인 양옆 프레임 바깥 경계까지만(프레이즈 프레임은 포함 안 함).
+    // 상단 테두리선은 그리지 않고(화면 최상단에 붙음), 레인과 맞닿는 하단 두 꼭짓점만 둥글다.
+    hudPanelRadius: 14, // 하단 모서리 둥글기 반지름 (px)
+    hudPanelColor: "#1a2030",
+    hudPanelBorderColor: "#556677",
+    hudPanelBorderWidth: 2,
+
+    // HUD 내부 여백
+    hudInnerPadX: 16, // 패널 좌/우 안쪽 여백
+    hudInnerGap: 16, // 배속 박스와 체력바 사이 간격
+
+    // 배속 표기 정사각형 (HUD 내부 좌측)
+    hudSpeedBoxSize: 44, // 정사각형 한 변 (px)
+    hudSpeedBoxColor: "#0a0a14",
+    hudSpeedBoxBorderColor: "#778899",
+    hudSpeedFontColor: "#ffffff",
+    hudSpeedFontSize: 22, // 배속 숫자 폰트 크기 (px)
+
+    // 체력바 (배속 박스 오른쪽, 패널 오른쪽 안쪽 여백까지 채움)
+    hudHpBarHeight: 28, // 막대 높이 (px)
+    hudHpBarBgColor: "#222a38",
+    hudHpBarColorFull: "#ff8800", // 100%
+    hudHpBarColorPartial: "#3388ff", // 100% 미만
+    hudHpRatio: 1, // 표시용 체력 비율(0~1). 옵션 무관 고정값(현재 만피).
 
     // 노트 색상 [index 0 미사용, 1~5 = 라인 1~5]
     noteColors: [null, "#ff4444", "#44ff44", "#4444ff", "#ffff44", "#ff44ff"],
@@ -104,10 +143,8 @@ function getVisualJudgeLineY(cfg) {
     if (cfg.direction === 1) {
         return PROFILE.judgeLineYReverse - posOffsetPx;
     } else {
-        // TODO: Normal 기준 판정선 위치는 실측값 아님 - Reverse 기준 상하 반전
-        const baseY =
-            PROFILE.laneTop + PROFILE.laneBottom - PROFILE.judgeLineYReverse;
-        return baseY + posOffsetPx;
+        // Normal: 옵션값이 커질수록 아래로 내려감 (Y 증가). 변동량·범위는 Reverse와 동일.
+        return PROFILE.judgeLineYNormal + posOffsetPx;
     }
 }
 
@@ -132,14 +169,12 @@ function getInternalJudgeLineY(cfg) {
     return cfg.direction === 1 ? visualY + timingPx : visualY - timingPx;
 }
 
-// 노트 등장 마스크 경계 Y — 이 선까지(레인 진입 가장자리 쪽) 노트가 가려진다.
-// Reverse: noteSpawnY 그대로(레인 상단~이 선 가림).
-// Normal: 상하 반전(이 선~레인 하단 가림). (TODO: Normal 실측값 아님)
+// 노트 등장 마스크 경계 Y — 이 픽셀이 첫 노출 위치이며, 그 너머(진입 가장자리 쪽)가 가려진다.
+// Reverse: 레인 상단~이 선 직전 가림. Normal: 이 선 직후~레인 하단 가림.
 function getNoteSpawnY(cfg) {
-    if (cfg.direction === 1) {
-        return PROFILE.noteSpawnY;
-    }
-    return PROFILE.laneTop + PROFILE.laneBottom - PROFILE.noteSpawnY;
+    return cfg.direction === 1
+        ? PROFILE.noteSpawnYReverse
+        : PROFILE.noteSpawnYNormal;
 }
 
 // y = judgeLineY - direction * (noteTime - songTime) * speed_pps
@@ -366,11 +401,11 @@ function drawNoteSpawnMask(ctx) {
     ctx.save();
     ctx.beginPath();
     if (_config.direction === 1) {
-        // Reverse: 레인 상단 ~ spawnY 구간을 가림
+        // Reverse: 레인 상단 ~ spawnY 직전 구간을 가림 (spawnY가 첫 노출 픽셀)
         ctx.rect(laneLeft, laneTop, laneWidth, spawnY - laneTop);
     } else {
-        // Normal: spawnY ~ 레인 하단 구간을 가림
-        ctx.rect(laneLeft, spawnY, laneWidth, laneBottom - spawnY);
+        // Normal: spawnY 직후 ~ 레인 하단 구간을 가림 (spawnY가 첫 노출 픽셀)
+        ctx.rect(laneLeft, spawnY + 1, laneWidth, laneBottom - spawnY);
     }
     ctx.clip();
     drawBackground(ctx);
@@ -378,8 +413,10 @@ function drawNoteSpawnMask(ctx) {
 }
 
 // 서든/히든 가림막.
-// 방향·판정선·타이밍 등 다른 어떤 옵션에도 영향받지 않는다.
-// 각자 자신의 옵션값만으로 "기준 위치 + 가변량 × 옵션값"의 일차함수로 경계가 정해진다.
+// 경계 위치는 자신의 옵션값만으로 "기준 위치 + 가변량 × 옵션값"의 일차함수로 정해지며,
+// 판정선·타이밍 등 다른 옵션엔 영향받지 않는다.
+// 단, 가리는 방향은 노트 등장 방향(direction)에 따라 바뀐다:
+// Normal에서는 서든이 하단(Reverse 히든), 히든이 상단(Reverse 서든)을 가린다.
 // draw()에서 마지막에 호출되어 노트·박자선·판정선을 모두 덮는다.
 function drawCovers(ctx) {
     if (_config.sudden <= 0 && _config.hidden <= 0) return;
@@ -396,19 +433,147 @@ function drawCovers(ctx) {
 
     ctx.fillStyle = "rgba(0, 0, 0, 1)";
 
-    // 서든: 화면 최상단(Y=0)부터 경계까지 가림.
-    // 경계 = suddenBaseY + coverPerUnit × sudden (값이 클수록 아래로 내려와 더 많이 가림)
-    if (_config.sudden > 0) {
-        const coverBottom = suddenBaseY + coverPerUnit * _config.sudden;
+    // 상단 가림: 화면 최상단(Y=0) ~ 경계. 경계 = suddenBaseY + coverPerUnit × 옵션값.
+    const drawTopCover = (value) => {
+        const coverBottom = suddenBaseY + coverPerUnit * value;
         ctx.fillRect(laneLeft, 0, laneWidth, coverBottom);
-    }
-
-    // 히든: 경계부터 화면 최하단(Y=height)까지 가림.
-    // 경계 = hiddenBaseY - coverPerUnit × hidden (값이 클수록 위로 올라가 더 많이 가림)
-    if (_config.hidden > 0) {
-        const coverTop = hiddenBaseY - coverPerUnit * _config.hidden;
+    };
+    // 하단 가림: 경계 ~ 화면 최하단(Y=height). 경계 = hiddenBaseY − coverPerUnit × 옵션값.
+    const drawBottomCover = (value) => {
+        const coverTop = hiddenBaseY - coverPerUnit * value;
         ctx.fillRect(laneLeft, coverTop, laneWidth, height - coverTop);
+    };
+
+    if (_config.direction === 1) {
+        // Reverse: 노트가 위에서 등장 → 서든=상단 가림, 히든=하단 가림.
+        if (_config.sudden > 0) drawTopCover(_config.sudden);
+        if (_config.hidden > 0) drawBottomCover(_config.hidden);
+    } else {
+        // Normal: 노트가 아래에서 등장 →
+        // 서든은 Reverse 히든처럼 하단을, 히든은 Reverse 서든처럼 상단을 가린다.
+        if (_config.sudden > 0) drawBottomCover(_config.sudden);
+        if (_config.hidden > 0) drawTopCover(_config.hidden);
     }
+}
+
+// 고정 프레임/HUD 그리기.
+// 옵션에 따라 (서든/히든에) 가려질 수는 있으나 그 위치·형태는 변하지 않는다.
+// 모든 시각 요소 위(가장 나중)에 그려져 게임 UI 크롬 역할을 한다.
+function drawFrame(ctx) {
+    const {
+        height,
+        laneLeft,
+        wailingRight,
+        laneTop,
+        laneFrameThickness,
+        laneFrameColor,
+        phraseFrameThickness,
+        phraseFrameColor,
+        hudPanelRadius,
+        hudPanelColor,
+        hudPanelBorderColor,
+        hudPanelBorderWidth,
+        hudInnerPadX,
+        hudInnerGap,
+        hudSpeedBoxSize,
+        hudSpeedBoxColor,
+        hudSpeedBoxBorderColor,
+        hudSpeedFontColor,
+        hudSpeedFontSize,
+        hudHpBarHeight,
+        hudHpBarBgColor,
+        hudHpBarColorFull,
+        hudHpBarColorPartial,
+        hudHpRatio,
+    } = PROFILE;
+
+    // 레인 좌우 얇은 프레임 — 화면 최상단(Y=0)~최하단(height)까지.
+    // 상단 HUD 패널에 가려지는 구간은 패널 하단 굴곡 사이로 자연스럽게 비친다.
+    ctx.fillStyle = laneFrameColor;
+    ctx.fillRect(laneLeft - laneFrameThickness, 0, laneFrameThickness, height);
+    ctx.fillRect(wailingRight, 0, laneFrameThickness, height);
+
+    // 우측 얇은 프레임 바로 오른쪽의 두꺼운 프레이즈 프레임.
+    // 화면 최상단(Y=0)~최하단(height)까지 걸쳐 있다.
+    ctx.fillStyle = phraseFrameColor;
+    ctx.fillRect(
+        wailingRight + laneFrameThickness,
+        0,
+        phraseFrameThickness,
+        height,
+    );
+
+    // 상단 HUD 패널 — 화면 최상단(Y=0)~레인 시작(laneTop)에 빈틈없이 붙는다.
+    // 좌우 너비는 레인 양옆 프레임 바깥 경계까지(프레이즈 프레임 미포함).
+    const panelLeft = laneLeft - laneFrameThickness;
+    const panelRight = wailingRight + laneFrameThickness;
+    const panelTop = 0;
+    const panelHeight = laneTop; // panelTop(0) ~ laneTop
+    ctx.beginPath();
+    ctx.roundRect(panelLeft, panelTop, panelRight - panelLeft, panelHeight, [
+        0,
+        0,
+        hudPanelRadius,
+        hudPanelRadius,
+    ]);
+    ctx.fillStyle = hudPanelColor;
+    ctx.fill();
+
+    // 테두리는 상단변을 제외하고(화면 최상단에 붙음) 좌·하(둥근)·우 변만 그린다.
+    const panelBottom = panelTop + panelHeight;
+    ctx.beginPath();
+    ctx.moveTo(panelLeft, panelTop);
+    ctx.lineTo(panelLeft, panelBottom - hudPanelRadius);
+    ctx.arcTo(
+        panelLeft,
+        panelBottom,
+        panelLeft + hudPanelRadius,
+        panelBottom,
+        hudPanelRadius,
+    );
+    ctx.lineTo(panelRight - hudPanelRadius, panelBottom);
+    ctx.arcTo(
+        panelRight,
+        panelBottom,
+        panelRight,
+        panelBottom - hudPanelRadius,
+        hudPanelRadius,
+    );
+    ctx.lineTo(panelRight, panelTop);
+    ctx.strokeStyle = hudPanelBorderColor;
+    ctx.lineWidth = hudPanelBorderWidth;
+    ctx.stroke();
+
+    // HUD 내부 좌측: 배속 표기 정사각형 (+ 현재 배속 숫자)
+    const speedBoxX = panelLeft + hudInnerPadX;
+    const speedBoxY = panelHeight / 2;
+    ctx.fillStyle = hudSpeedBoxColor;
+    ctx.fillRect(speedBoxX, speedBoxY, hudSpeedBoxSize, hudSpeedBoxSize);
+    ctx.strokeStyle = hudSpeedBoxBorderColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(speedBoxX, speedBoxY, hudSpeedBoxSize, hudSpeedBoxSize);
+
+    ctx.fillStyle = hudSpeedFontColor;
+    ctx.font = `bold ${hudSpeedFontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+        String(_config.speed ?? ""),
+        speedBoxX + hudSpeedBoxSize / 2,
+        speedBoxY + hudSpeedBoxSize / 2,
+    );
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    // HUD 내부 우측: 체력바 (배속 박스 오른쪽 ~ 패널 우측 안쪽 여백)
+    const hpBarX = speedBoxX + hudSpeedBoxSize + hudInnerGap;
+    const hpBarY = speedBoxY + (hudSpeedBoxSize - hudHpBarHeight) / 2;
+    const hpBarW = panelRight - hudInnerPadX - hpBarX;
+    const ratio = Math.max(0, Math.min(1, hudHpRatio));
+    ctx.fillStyle = hudHpBarBgColor;
+    ctx.fillRect(hpBarX, hpBarY, hpBarW, hudHpBarHeight);
+    ctx.fillStyle = ratio >= 1 ? hudHpBarColorFull : hudHpBarColorPartial;
+    ctx.fillRect(hpBarX, hpBarY, hpBarW * ratio, hudHpBarHeight);
 }
 
 // ---- 메인 드로우 / 루프 ----
@@ -420,8 +585,9 @@ function draw() {
     drawBeatLines(ctx, _songTime);
     drawNotes(ctx, _songTime);
     drawNoteSpawnMask(ctx);
-    drawJudgeLine(ctx);
     drawCovers(ctx);
+    drawJudgeLine(ctx);
+    drawFrame(ctx);
 }
 
 function loop(now) {
