@@ -81,7 +81,7 @@ function createRangeControl(def, currentValue) {
 
     const decBtn = document.createElement("button");
     decBtn.type = "button";
-    decBtn.className = "range-btn";
+    decBtn.className = "range-btn dec-btn";
     decBtn.textContent = "−";
     decBtn.setAttribute("aria-label", `${def.label} 감소`);
 
@@ -95,7 +95,7 @@ function createRangeControl(def, currentValue) {
 
     const incBtn = document.createElement("button");
     incBtn.type = "button";
-    incBtn.className = "range-btn";
+    incBtn.className = "range-btn inc-btn";
     incBtn.textContent = "+";
     incBtn.setAttribute("aria-label", `${def.label} 증가`);
 
@@ -103,28 +103,52 @@ function createRangeControl(def, currentValue) {
     valueDisplay.className = "range-value";
     valueDisplay.textContent = formatValue(currentValue, def.step);
 
+    // steps 배열이 있으면 슬라이더를 인덱스 기반으로 동작
+    const steps = def.steps ?? null;
+    if (steps) {
+        slider.min = 0;
+        slider.max = steps.length - 1;
+        slider.step = 1;
+        const initIdx = steps.indexOf(parseFloat(slider.value));
+        slider.value = initIdx >= 0 ? initIdx : 0;
+    }
+
     function applyValue(raw) {
-        let v = parseFloat(raw);
-        if (Number.isNaN(v)) return;
-        v = Math.min(def.max, Math.max(def.min, v));
-        // step 단위로 반올림 (부동소수점 오차 방지)
-        const decimals = (String(def.step).split(".")[1] ?? "").length;
-        v = parseFloat(v.toFixed(decimals));
-        slider.value = v;
-        valueDisplay.textContent = formatValue(v, def.step);
-        _onChange?.(def.id, v);
+        if (steps) {
+            let idx = parseInt(raw, 10);
+            if (Number.isNaN(idx)) return;
+            idx = Math.max(0, Math.min(steps.length - 1, idx));
+            slider.value = idx;
+            const v = steps[idx];
+            valueDisplay.textContent = formatValue(v, def.step);
+            _onChange?.(def.id, v);
+        } else {
+            let v = parseFloat(raw);
+            if (Number.isNaN(v)) return;
+            v = Math.min(def.max, Math.max(def.min, v));
+            // step 단위로 반올림 (부동소수점 오차 방지)
+            const decimals = (String(def.step).split(".")[1] ?? "").length;
+            v = parseFloat(v.toFixed(decimals));
+            slider.value = v;
+            valueDisplay.textContent = formatValue(v, def.step);
+            _onChange?.(def.id, v);
+        }
+    }
+
+    function stepIndex(dir) {
+        return String(parseInt(slider.value, 10) + dir);
     }
 
     slider.addEventListener("input", () => applyValue(slider.value));
     decBtn.addEventListener("click", () =>
-        applyValue(parseFloat(slider.value) - def.step),
+        steps ? applyValue(stepIndex(-1)) : applyValue(parseFloat(slider.value) - def.step),
     );
     incBtn.addEventListener("click", () =>
-        applyValue(parseFloat(slider.value) + def.step),
+        steps ? applyValue(stepIndex(1)) : applyValue(parseFloat(slider.value) + def.step),
     );
 
-    // cols 레이아웃에서는 −/+ 버튼 위치가 세로로 바뀜 (CSS로 처리)
-    row.append(incBtn, slider, decBtn, valueDisplay);
+    // rows: − 왼쪽, + 오른쪽. cols: CSS order 속성으로 + 위/− 아래로 재정렬
+    row.append(decBtn, slider, incBtn, valueDisplay);
     wrapper.appendChild(row);
     return wrapper;
 }

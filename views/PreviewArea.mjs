@@ -5,9 +5,13 @@ let _onPlay = null;
 let _onPause = null;
 let _onReset = null;
 
+/** @type {HTMLCanvasElement|null} */
+let _canvas = null;
+
 /**
  * 프리뷰 영역을 초기화합니다.
  * 내부에 플레이 화면(#playfield)과 재생 컨트롤을 생성합니다.
+ * 프리뷰는 캔버스로만 그려집니다. 그리는 로직은 *Preview.mjs 렌더러에 있습니다.
  * @param {HTMLElement} container - #preview-area 요소
  * @param {object} opts
  * @param {number} opts.previewAspect - 가로/세로 비율 (예: 16/9 = 1.7778)
@@ -29,23 +33,16 @@ export function init(container, { previewAspect, onPlay, onPause, onReset }) {
     const wrapper = document.createElement("div");
     wrapper.className = "playfield-wrapper";
 
-    // 플레이 화면 (Preview.mjs가 이 안의 요소를 사용)
+    // 플레이 화면 (렌더러가 이 안의 canvas에 그림)
     const playfield = document.createElement("div");
     playfield.id = "playfield";
-    playfield.innerHTML = `
-        <div class="note-lanes">
-            <div class="lane"></div>
-            <div class="lane"></div>
-            <div class="lane"></div>
-            <div class="lane"></div>
-            <div class="lane"></div>
-        </div>
-        <div id="judgeline"></div>
-        <div id="beat-layer" class="beat-layer"></div>
-        <div id="note-layer" class="note-layer"></div>
-        <div class="cover cover-top"></div>
-        <div class="cover cover-bottom"></div>
-    `;
+
+    // 캔버스 렌더러용 canvas. 내부 해상도는 렌더러가 게임 원본 해상도로 설정하고,
+    // CSS width/height:100%가 playfield 크기에 맞게 스케일한다.
+    _canvas = document.createElement("canvas");
+    _canvas.id = "gf-canvas";
+    _canvas.className = "gf-canvas";
+    playfield.appendChild(_canvas);
 
     wrapper.appendChild(playfield);
 
@@ -66,6 +63,24 @@ export function init(container, { previewAspect, onPlay, onPause, onReset }) {
 /** CSS 변수 --preview-aspect를 갱신합니다. */
 export function setAspect(aspect) {
     document.documentElement.style.setProperty("--preview-aspect", aspect);
+}
+
+/** 캔버스 렌더러용 canvas 요소를 반환합니다. */
+export function getCanvas() {
+    return _canvas;
+}
+
+/** 재생/일시정지/리셋 콜백을 교체합니다. 렌더러 전환 시 사용. */
+export function setCallbacks({ onPlay, onPause, onReset }) {
+    if (onPlay !== undefined) _onPlay = onPlay;
+    if (onPause !== undefined) _onPause = onPause;
+    if (onReset !== undefined) _onReset = onReset;
+}
+
+/** 재생 상태를 외부에서 설정합니다 (렌더러 전환 후 버튼 상태 동기화용). */
+export function setPlayState(isPlaying) {
+    _isPlaying = isPlaying;
+    updateButtonStates();
 }
 
 function handlePlay() {
