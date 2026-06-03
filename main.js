@@ -48,17 +48,24 @@ async function init() {
         previewAspect: currentPreset.previewAspect ?? 16 / 9,
     });
 
+    // ---- AnalysisPanel ----
+    // 분석 계산은 활성 렌더러(_activePreview)의 getAnalysis에 위임된다.
+    const analysisPanel = AnalysisPanel.init(
+        document.getElementById("analysis-panel"),
+        {
+            getAnalysis: () => Analysis.getAnalysis(config, _activePreview),
+        },
+    );
+
     // ---- OptionsPanel ----
     OptionsPanel.init(document.getElementById("options-panel"), {
         layout: currentPreset.optionsLayout ?? "rows",
         options: currentPreset.options,
         values: config,
-        onChange: OptionService.applyOptionChange,
-    });
-
-    // ---- AnalysisPanel ----
-    AnalysisPanel.init(document.getElementById("analysis-panel"), {
-        getAnalysis: () => Analysis.getAnalysis(config),
+        onChange: (id, value) => {
+            OptionService.applyOptionChange(id, value);
+            analysisPanel.update();
+        },
     });
 
     // ---- MonitorSettingsModal ----
@@ -66,6 +73,7 @@ async function init() {
         onSave: (data) => {
             Monitor.save(data);
             TopBar.updateMonitorSummary(Monitor.getSummaryText());
+            analysisPanel.update(); // 노트 속도는 모니터에 의존
         },
         monitor: Monitor.getMonitor(),
     });
@@ -119,6 +127,7 @@ async function init() {
         BMSInput.setContent(preview.DEFAULT_BMS);
         preview.start();
         PreviewArea.setPlayState(true);
+        analysisPanel.update();
     }
 
     function handleGameChange(presetId) {

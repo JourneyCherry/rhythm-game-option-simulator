@@ -1,9 +1,6 @@
-// TODO: 분석 수치 계산 로직이 구현되면 카드 업데이트 활성화 (services/Analysis.mjs 참조)
-
 const METRICS = [
     { key: "displayTimeMs", label: "노트 표시 시간", unit: "ms" },
-    { key: "fallSpeedMmPerSec", label: "낙하 속도", unit: "mm/s" },
-    { key: "effectiveRangePercent", label: "유효 구간", unit: "%" },
+    { key: "noteSpeedCmPerSec", label: "노트 속도", unit: "cm/s" },
 ];
 
 let _cardValueEls = {};
@@ -13,7 +10,7 @@ let _getAnalysis = null;
  * 분석 패널을 초기화합니다.
  * @param {HTMLElement} container - #analysis-panel 요소
  * @param {object} opts
- * @param {function} opts.getAnalysis - () => { displayTimeMs, fallSpeedMmPerSec, effectiveRangePercent }
+ * @param {function} opts.getAnalysis - () => { displayTimeMs, noteSpeedCmPerSec }
  * @returns {{ update: function }} - update()를 호출하면 카드를 갱신
  */
 export function init(container, { getAnalysis }) {
@@ -57,7 +54,6 @@ export function init(container, { getAnalysis }) {
 
 /** 분석 수치를 다시 계산하여 카드를 갱신합니다. */
 export function update() {
-    // TODO: getAnalysis()가 실제 값을 반환하면 여기서 카드 갱신
     if (!_getAnalysis) return;
     const analysis = _getAnalysis();
     METRICS.forEach(({ key }) => {

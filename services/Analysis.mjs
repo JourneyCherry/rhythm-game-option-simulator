@@ -1,25 +1,28 @@
 import * as Monitor from "./Monitor.mjs";
 
 /**
- * 현재 config와 모니터 정보를 기반으로 분석 수치를 계산합니다.
+ * 현재 config·모니터 정보를 기반으로 분석 수치를 계산합니다.
+ * 실제 계산은 게임별 렌더러의 동명 함수(`renderer.getAnalysis`)에 위임합니다.
+ * 모든 게임이 같은 형태({ displayTimeMs, noteSpeedCmPerSec })를 반환하므로
+ * 활성 렌더러만 바꿔 끼우면 동일한 분석 내용을 얻을 수 있습니다.
+ *
  * @param {object} config - 현재 옵션 설정값
- * @returns {object} 분석 수치 객체
+ * @param {object} renderer - 활성 캔버스 렌더러 모듈 (getAnalysis export 필요)
+ * @returns {{ displayTimeMs: number|null, noteSpeedCmPerSec: number|null }}
  */
-export function getAnalysis(config) {
-    // TODO: 판정선 위치(%) 및 화면 높이를 기준으로 노트 표시 시간(ms) 계산
-    //       speed 값, 화면 비율, 판정선 위치를 사용
-    const displayTimeMs = null;
+export function getAnalysis(config, renderer) {
+    if (!renderer || typeof renderer.getAnalysis !== "function") {
+        return { displayTimeMs: null, noteSpeedCmPerSec: null };
+    }
 
-    // TODO: 픽셀 간격(mm)과 speed 값으로 낙하 속도(mm/s) 계산
-    //       Monitor.getPixelPitchMm() 활용
-    const fallSpeedMmPerSec = null;
+    const monitor = Monitor.getMonitor();
+    const monitorMetrics = monitor
+        ? {
+              pixelPitchMm: Monitor.getPixelPitchMm(),
+              widthPx: monitor.widthPx,
+              heightPx: monitor.heightPx,
+          }
+        : null;
 
-    // TODO: sudden(%)과 hidden(%)을 고려한 노트 유효 구간(%) 계산
-    const effectiveRangePercent = null;
-
-    return {
-        displayTimeMs,
-        fallSpeedMmPerSec,
-        effectiveRangePercent,
-    };
+    return renderer.getAnalysis(config, monitorMetrics);
 }

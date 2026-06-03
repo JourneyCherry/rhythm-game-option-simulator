@@ -10,7 +10,7 @@ const PROFILE = {
     buttonRight: 1071, // 5버튼 영역 우측 경계
     wailingRight: 1138.5, // 웨일링 영역 우측 경계
     laneTop: 104,
-    noteSpawnYReverse: 155, // Reverse 기준 노트 최초 등장(첫 노출) Y
+    noteSpawnYReverse: 156, // Reverse 기준 노트 최초 등장(첫 노출) Y
     noteSpawnYNormal: 1001, // Normal 기준 노트 최초 등장(첫 노출) Y
     laneBottom: 1080,
 
@@ -597,6 +597,84 @@ function loop(now) {
     _songTime += dt;
     draw();
     requestAnimationFrame(loop);
+}
+
+// ---- 분석 수치 계산 ----
+
+// 노트 속도(cm/s) — 내부 px/s를 모니터 물리 길이로 환산한다.
+// 게임 화면(16:9)을 비율 유지하며 모니터에 꽉 채운다고 가정:
+// 모니터가 게임보다 가로로 길면 세로 기준, 세로로 길면 가로 기준으로 맞춘다.
+// metrics({ pixelPitchMm, widthPx, heightPx })가 없거나 부족하면 null.
+function computeNoteSpeedCmPerSec(speed_pps, metrics) {
+    if (!metrics || !metrics.pixelPitchMm || !metrics.widthPx || !metrics.heightPx) {
+        return null;
+    }
+    const { pixelPitchMm, widthPx, heightPx } = metrics;
+    const monitorWidthMm = widthPx * pixelPitchMm;
+    const monitorHeightMm = heightPx * pixelPitchMm;
+    const gameAspect = PROFILE.width / PROFILE.height; // 16:9
+
+    // 모니터 화면비가 게임보다 넓으면(>=) 세로에 맞춤, 좁으면(세로가 길면) 가로에 맞춤.
+    const monitorAspect = widthPx / heightPx;
+    const gameDisplayHeightMm =
+        monitorAspect >= gameAspect
+            ? monitorHeightMm
+            : monitorWidthMm / gameAspect;
+
+    const mmPerPx = gameDisplayHeightMm / PROFILE.height; // 내부 1px(세로)당 실제 mm
+    const mmPerSec = speed_pps * mmPerPx;
+    return mmPerSec / 10; // mm → cm
+}
+
+// 분석 수치 계산. 프리뷰 기하를 그대로 사용하므로 모든 옵션 변화가 즉시 반영된다.
+// monitorMetrics: { pixelPitchMm, widthPx, heightPx } | null
+//   - displayTimeMs: 모니터와 무관(시간 단위)하게 항상 계산.
+//   - noteSpeedCmPerSec: 모니터 미설정 시 null.
+export function getAnalysis(cfg, monitorMetrics) {
+    const speed_pps = getSpeedPps(cfg);
+    const spawnY = getNoteSpawnY(cfg);
+
+    // 사라지는 기준선: 표시(노란) 판정선.
+    // TODO: 정확한 타이밍 기준을 내부 판정선(getInternalJudgeLineY)으로 할지,
+    //       또는 표시선·내부선 둘 다 표기할지 확인 필요.
+    const judgeY = getVisualJudgeLineY(cfg);
+
+    const sudden = cfg.sudden ?? 0;
+    const hidden = cfg.hidden ?? 0;
+
+    // 커버 경계 — drawCovers와 동일 공식.
+    const topCoverEdge = (v) => PROFILE.suddenBaseY + PROFILE.coverPerUnit * v;
+    const bottomCoverEdge = (v) => PROFILE.hiddenBaseY - PROFILE.coverPerUnit * v;
+
+    // appearY(처음 보이는 위치): 노트 등장 마스크 + 서든.
+    // disappearY(사라지는 위치): 판정선 + 히든(판정선을 덮으면 히든 경계가 우선).
+    let appearY, disappearY;
+    if (cfg.direction === 1) {
+        // Reverse(위→아래): 서든=상단 커버, 히든=하단 커버.
+        appearY = sudden > 0 ? Math.max(spawnY, topCoverEdge(sudden)) : spawnY;
+        disappearY =
+            hidden > 0 ? Math.min(judgeY, bottomCoverEdge(hidden)) : judgeY;
+    } else {
+        // Normal(아래→위): 서든=하단 커버, 히든=상단 커버.
+        appearY = sudden > 0 ? Math.min(spawnY, bottomCoverEdge(sudden)) : spawnY;
+        disappearY =
+            hidden > 0 ? Math.max(judgeY, topCoverEdge(hidden)) : judgeY;
+    }
+
+    // 이동 방향 기준 가시 거리. 서든/히든이 반대편 경계를 넘어
+    // 노트가 한 번도 보이지 않으면 음수가 되므로 0으로 클램프한다.
+    // Reverse: 위→아래(appearY < disappearY), Normal: 아래→위(appearY > disappearY).
+    const visibleDistancePx =
+        cfg.direction === 1
+            ? Math.max(0, disappearY - appearY)
+            : Math.max(0, appearY - disappearY);
+    const displayTimeMs = Math.round((visibleDistancePx / speed_pps) * 1000);
+
+    const noteSpeedRaw = computeNoteSpeedCmPerSec(speed_pps, monitorMetrics);
+    const noteSpeedCmPerSec =
+        noteSpeedRaw == null ? null : Math.round(noteSpeedRaw * 10) / 10;
+
+    return { displayTimeMs, noteSpeedCmPerSec };
 }
 
 // ---- 공개 API ----

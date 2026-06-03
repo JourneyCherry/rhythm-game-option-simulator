@@ -10,7 +10,6 @@ let _presetSelect = null;
 let _sizeInput = null;
 let _widthInput = null;
 let _heightInput = null;
-let _refreshInput = null;
 let _delayInput = null;
 let _aspectDisplay = null;
 let _overrideCheck = null;
@@ -109,16 +108,6 @@ export function init(container, { onSave, monitor }) {
         inp.addEventListener("input", updateAspectDisplay),
     );
 
-    // 새로고침 주사율
-    const refreshGroup = makeFieldGroup("주사율 (Hz)");
-    _refreshInput = makeInput("number", "60", "narrow");
-    _refreshInput.min = 1;
-    _refreshInput.max = 1000;
-    const refreshRow = document.createElement("div");
-    refreshRow.className = "field-row";
-    refreshRow.append(_refreshInput, makeSep("Hz"));
-    refreshGroup.appendChild(refreshRow);
-
     // 입력 지연
     const delayGroup = makeFieldGroup("입력 지연 (ms)");
     _delayInput = makeInput("number", "0", "narrow");
@@ -157,7 +146,6 @@ export function init(container, { onSave, monitor }) {
         divider,
         sizeGroup,
         resGroup,
-        refreshGroup,
         delayGroup,
         aspectGroup,
     );
@@ -204,7 +192,6 @@ function handleSave() {
         sizeInches: parseFloatOrNull(_sizeInput.value),
         widthPx: parseIntOrNull(_widthInput.value),
         heightPx: parseIntOrNull(_heightInput.value),
-        refreshRateHz: parseIntOrNull(_refreshInput.value),
         inputDelayMs: parseFloatOrNull(_delayInput.value) ?? 0,
         aspectOverride: _overrideCheck.checked
             ? _aspectOverrideInput.value.trim() || null
@@ -218,7 +205,6 @@ function fillForm(data) {
     if (_sizeInput) _sizeInput.value = data.sizeInches ?? "";
     if (_widthInput) _widthInput.value = data.widthPx ?? "";
     if (_heightInput) _heightInput.value = data.heightPx ?? "";
-    if (_refreshInput) _refreshInput.value = data.refreshRateHz ?? "";
     if (_delayInput) _delayInput.value = data.inputDelayMs ?? 0;
     if (data.aspectOverride) {
         _overrideCheck.checked = true;
