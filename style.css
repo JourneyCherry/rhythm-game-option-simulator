@@ -13,22 +13,6 @@
     --mobile-tab-bar-height: 52px;
     --footer-height: auto;
 
-    /* 플레이 화면 */
-    --lane-area-width: 20%;
-    --lane-area-left: 50%;
-    --lane-area-translate-x: -50%;
-    --lane-outer-border-thick: 3px;
-    --lane-inner-border-thin: 1px;
-    --cover-top-height: 15%;
-    --cover-bottom-height: 15%;
-    --judgeline-position: 80%;
-    --judgeline-thickness: 0.6%;
-    --note-height: 0.6%;
-    --beatline-height: 0.4%;
-    --beatline-color: rgba(255, 255, 255, 0.5);
-    --barline-height: 0.8%;
-    --barline-color: rgba(255, 255, 255, 0.9);
-
     /* 색상 */
     --color-bg-body: #111;
     --color-bg-panel: #1a1a1a;
@@ -38,8 +22,6 @@
     --color-text-muted: #999;
     --color-border: #333;
     --color-border-playfield: #555;
-    --color-line-outer: rgba(255, 255, 255, 0.8);
-    --color-line-inner: rgba(255, 255, 255, 0.4);
 
     /* 칩 */
     --color-chip-bg: #2a2a2a;
@@ -499,23 +481,6 @@ button {
     color: var(--color-text-main);
 }
 
-.gear-btn {
-    background: none;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-main);
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gear-btn:hover {
-    background: #2a2a2a;
-}
-
 /* ====================
    Options Panel
    ==================== */
@@ -728,6 +693,12 @@ button {
     font-size: 0.85rem;
 }
 
+/* cols 레이아웃: DOM 순서(− slider + value)를 시각적으로 (+ slider − value) 재정렬 */
+.options-panel-inner.layout-cols .inc-btn  { order: 1; } /* + 위 */
+.options-panel-inner.layout-cols .option-slider { order: 2; }
+.options-panel-inner.layout-cols .dec-btn  { order: 3; } /* − 아래 */
+.options-panel-inner.layout-cols .range-value   { order: 4; }
+
 /* ====================
    Preview Area
    ==================== */
@@ -796,94 +767,17 @@ button {
     cursor: default;
 }
 
-/* 플레이 화면 내부 요소 (Preview.mjs에서 사용) */
+/* 캔버스 렌더러 (*Preview.mjs) */
 
-.note-lanes {
+.gf-canvas {
     position: absolute;
     top: 0;
-    bottom: 0;
-    width: var(--lane-area-width);
-    left: var(--lane-area-left);
-    transform: translateX(var(--lane-area-translate-x));
-    display: flex;
-    border-left: var(--lane-outer-border-thick) solid var(--color-line-outer);
-    border-right: var(--lane-outer-border-thick) solid var(--color-line-outer);
-}
-
-.lane {
-    flex: 1;
-    border-right: var(--lane-inner-border-thin) solid var(--color-line-inner);
-}
-
-.lane:last-child {
-    border-right: none;
-}
-
-#judgeline {
-    position: absolute;
-    width: var(--lane-area-width);
-    left: var(--lane-area-left);
-    transform: translateX(var(--lane-area-translate-x));
-    height: var(--judgeline-thickness);
-    top: var(--judgeline-position);
-    background: rgba(255, 255, 255, 0.5);
-    z-index: 5;
-}
-
-.note-layer,
-.beat-layer {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--lane-area-width);
-    left: var(--lane-area-left);
-    transform: translateX(var(--lane-area-translate-x));
-    pointer-events: none;
-    z-index: 10;
-}
-
-.note {
-    position: absolute;
-    width: calc(100% / 5);
-    height: var(--note-height);
-    border-radius: 4px;
-}
-
-.timing-line {
-    position: absolute;
+    left: 0;
+    /* CSS width/height:100%로 playfield 크기에 맞게 스케일됨.
+       canvas.width/height는 게임 원본 해상도로 설정되어 내부 드로우는 원본 좌표 사용. */
     width: 100%;
-}
-
-.timing-line.beat {
-    height: var(--beatline-height);
-    background: var(--beatline-color);
-}
-
-.timing-line.bar {
-    height: var(--barline-height);
-    background: var(--barline-color);
-}
-
-.cover {
-    position: absolute;
-    width: var(--lane-area-width);
-    left: var(--lane-area-left);
-    transform: translateX(var(--lane-area-translate-x));
-    background: #000;
-    pointer-events: none;
-    z-index: 20;
-}
-
-.cover-top {
-    top: 0;
-    height: var(--cover-top-height);
-    border-bottom: 2px solid var(--color-line-outer);
-}
-
-.cover-bottom {
-    bottom: 0;
-    height: var(--cover-bottom-height);
-    border-top: 2px solid var(--color-line-outer);
+    height: 100%;
+    display: block;
 }
 
 /* ====================

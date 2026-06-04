@@ -1,3 +1,6 @@
+/** @type {HTMLTextAreaElement|null} */
+let _textarea = null;
+
 /**
  * BMS 입력 UI 요소를 생성합니다.
  * 데스크톱/태블릿: footer collapsible
@@ -33,6 +36,7 @@ export function create({ onParse }) {
     textarea.rows = 5;
     textarea.setAttribute("aria-label", "BMS 데이터 입력");
     textarea.setAttribute("spellcheck", "false");
+    _textarea = textarea;
 
     const applyBtn = document.createElement("button");
     applyBtn.type = "button";
@@ -46,4 +50,13 @@ export function create({ onParse }) {
     root.append(toggle, body);
 
     return root;
+}
+
+/**
+ * textarea 내용을 외부에서 설정합니다.
+ * 렌더러 전환 시 게임별 기본 BMS 스크립트를 채워넣는 용도.
+ * @param {string} text
+ */
+export function setContent(text) {
+    if (_textarea) _textarea.value = text;
 }

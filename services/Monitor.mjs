@@ -2,54 +2,57 @@ const STORAGE_KEY = "rg-monitor";
 
 const PRESETS = [
     {
-        label: "커스텀",
-        sizeInches: null,
-        widthPx: null,
-        heightPx: null,
-        refreshRateHz: null,
+        label: '32" 1920×1080 (아케이드)',
+        sizeInches: 32,
+        widthPx: 1920,
+        heightPx: 1080,
         inputDelayMs: 0,
     },
     {
-        label: '24" 1920×1080 144Hz',
+        label: '24" 1920×1080',
         sizeInches: 24,
         widthPx: 1920,
         heightPx: 1080,
-        refreshRateHz: 144,
         inputDelayMs: 0,
     },
     {
-        label: '27" 1920×1080 60Hz',
+        label: '27" 1920×1080',
         sizeInches: 27,
         widthPx: 1920,
         heightPx: 1080,
-        refreshRateHz: 60,
         inputDelayMs: 0,
     },
     {
-        label: '27" 2560×1440 165Hz',
+        label: '27" 2560×1440',
         sizeInches: 27,
         widthPx: 2560,
         heightPx: 1440,
-        refreshRateHz: 165,
         inputDelayMs: 0,
     },
     {
-        label: '32" 3840×2160 60Hz',
+        label: '32" 3840×2160',
         sizeInches: 32,
         widthPx: 3840,
         heightPx: 2160,
-        refreshRateHz: 60,
         inputDelayMs: 0,
     },
     {
-        label: '15.6" 1920×1080 60Hz (노트북)',
+        label: '15.6" 1920×1080 (노트북)',
         sizeInches: 15.6,
         widthPx: 1920,
         heightPx: 1080,
-        refreshRateHz: 60,
         inputDelayMs: 0,
     },
 ];
+
+// 기본 모니터 — 아케이드와 동일 환경(32" 1920×1080). 저장값이 없을 때 사용.
+const DEFAULT_MONITOR = {
+    sizeInches: 32,
+    widthPx: 1920,
+    heightPx: 1080,
+    inputDelayMs: 0,
+    aspectOverride: null,
+};
 
 let _monitor = null;
 
@@ -59,8 +62,10 @@ export function init() {
         try {
             _monitor = JSON.parse(stored);
         } catch {
-            _monitor = null;
+            _monitor = { ...DEFAULT_MONITOR };
         }
+    } else {
+        _monitor = { ...DEFAULT_MONITOR };
     }
 }
 
@@ -87,7 +92,6 @@ export function getSummaryText() {
     const parts = [];
     if (m.sizeInches) parts.push(`${m.sizeInches}"`);
     if (m.widthPx && m.heightPx) parts.push(`${m.widthPx}×${m.heightPx}`);
-    if (m.refreshRateHz) parts.push(`${m.refreshRateHz}Hz`);
     return parts.join(" ") || "모니터 미설정";
 }
 

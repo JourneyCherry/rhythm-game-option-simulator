@@ -21,34 +21,15 @@ export function getConfig() {
 
 export function applyOptionChange(id, value) {
     switch (id) {
-        case "speed":
-            config.speed = value;
-            break;
-        case "sudden":
-            config.sudden = value;
-            applyCoverHeights();
-            break;
-        case "hidden":
-            config.hidden = value;
-            applyCoverHeights();
-            break;
         case "direction": {
             const v = parseInt(value, 10);
             if (v === 1 || v === -1) config.direction = v;
             break;
         }
+        default:
+            config[id] = value;
+            break;
     }
-}
-
-export function applyCoverHeights() {
-    document.documentElement.style.setProperty(
-        "--cover-top-height",
-        `${config.sudden}%`,
-    );
-    document.documentElement.style.setProperty(
-        "--cover-bottom-height",
-        `${config.hidden}%`,
-    );
 }
 
 export function applyPreset(presetId, presetMap, onPresetsChange) {
@@ -60,7 +41,6 @@ export function applyPreset(presetId, presetMap, onPresetsChange) {
     for (const opt of preset.options) {
         config[opt.id] = opt.defaultValue;
     }
-    applyCoverHeights();
 
     if (onPresetsChange) onPresetsChange(preset);
 }

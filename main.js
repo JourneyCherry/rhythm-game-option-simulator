@@ -1,6 +1,7 @@
 import { loadPresets } from "./constants/Preset.mjs";
 import * as OptionService from "./services/Option.mjs";
-import * as Preview from "./services/Preview.mjs";
+import * as GFKonasutePreview from "./services/GFKonasutePreview.mjs";
+import * as GFArenaPreview from "./services/GFArenaPreview.mjs";
 import * as Monitor from "./services/Monitor.mjs";
 import * as Analysis from "./services/Analysis.mjs";
 import * as BMSParser from "./services/BMSParser.mjs";
@@ -15,24 +16,26 @@ import * as MobileTabBar from "./views/MobileTabBar.mjs";
 async function init() {
     Monitor.init();
 
-    const rootStyles = getComputedStyle(document.documentElement);
-    const judgeLinePercent = parseFloat(
-        rootStyles.getPropertyValue("--judgeline-position"),
-    );
-    const JUDGE_LINE_Y = Number.isNaN(judgeLinePercent)
-        ? 0.8
-        : judgeLinePercent / 100;
-
     const { defaultPresetId, presetMap } = await loadPresets();
     let currentPreset = presetMap[defaultPresetId];
 
+    // 모니터 설정은 게임에 종속 — 기본 게임의 기본 모니터로 덮어쓴다.
+    // (개인 모니터 영속화는 추후 쿠키 등으로 별도 처리 예정)
+    if (currentPreset.defaultMonitor) Monitor.save(currentPreset.defaultMonitor);
+
     const config = OptionService.initConfig(currentPreset);
-    OptionService.applyCoverHeights();
 
     const app = document.getElementById("app");
     setDockClass(app, currentPreset.optionsDock);
 
-    let _previewStarted = false;
+    // gameProfile → 캔버스 렌더러 모듈 맵. 게임 추가 시 여기에 항목을 추가한다.
+    const PREVIEWS = {
+        konasute: GFKonasutePreview,
+        arena: GFArenaPreview,
+    };
+
+    // 현재 활성 렌더러 모듈
+    let _activePreview = null;
 
     // ---- TopBar ----
     TopBar.init(document.getElementById("top-bar"), {
@@ -44,33 +47,29 @@ async function init() {
     });
 
     // ---- PreviewArea ----
+    // 재생/일시정지/리셋 콜백은 activatePreview()가 활성 렌더러에 맞춰 설정한다.
     PreviewArea.init(document.getElementById("preview-area"), {
         previewAspect: currentPreset.previewAspect ?? 16 / 9,
-        onPlay: () => Preview.start(),
-        onPause: () => Preview.stop(),
-        onReset: handlePreviewReset,
     });
 
-    // Preview 서비스 초기화 (PreviewArea DOM 생성 후)
-    const noteLayer = document.getElementById("note-layer");
-    const beatLayer = document.getElementById("beat-layer");
-    if (!noteLayer || !beatLayer) {
-        console.error("note-layer 또는 beat-layer를 찾을 수 없습니다.");
-        return;
-    }
-    Preview.init({ noteLayer, beatLayer, config, judgeLineY: JUDGE_LINE_Y });
+    // ---- AnalysisPanel ----
+    // 분석 계산은 활성 렌더러(_activePreview)의 getAnalysis에 위임된다.
+    const analysisPanel = AnalysisPanel.init(
+        document.getElementById("analysis-panel"),
+        {
+            getAnalysis: () => Analysis.getAnalysis(config, _activePreview),
+        },
+    );
 
     // ---- OptionsPanel ----
     OptionsPanel.init(document.getElementById("options-panel"), {
         layout: currentPreset.optionsLayout ?? "rows",
         options: currentPreset.options,
         values: config,
-        onChange: OptionService.applyOptionChange,
-    });
-
-    // ---- AnalysisPanel ----
-    AnalysisPanel.init(document.getElementById("analysis-panel"), {
-        getAnalysis: () => Analysis.getAnalysis(config),
+        onChange: (id, value) => {
+            OptionService.applyOptionChange(id, value);
+            analysisPanel.update();
+        },
     });
 
     // ---- MonitorSettingsModal ----
@@ -78,7 +77,7 @@ async function init() {
         onSave: (data) => {
             Monitor.save(data);
             TopBar.updateMonitorSummary(Monitor.getSummaryText());
-            startPreviewOnce();
+            analysisPanel.update(); // 노트 속도는 모니터에 의존
         },
         monitor: Monitor.getMonitor(),
     });
@@ -113,14 +112,26 @@ async function init() {
     // 초기 탭 상태 적용
     handleTabChange("options");
 
-    startPreviewOnce();
+    // 기본 프리셋의 렌더러로 시작
+    activatePreview(currentPreset);
 
     // ======== 핸들러 ========
 
-    function startPreviewOnce() {
-        if (_previewStarted) return;
-        _previewStarted = true;
-        Preview.start();
+    // gameProfile에 맞는 캔버스 렌더러를 활성화한다.
+    // 초기 진입과 게임 전환(konasute↔arena 등) 모두 이 함수를 통한다.
+    function activatePreview(preset) {
+        const preview = PREVIEWS[preset.gameProfile] ?? GFKonasutePreview;
+        _activePreview = preview;
+        preview.init({ canvas: PreviewArea.getCanvas(), config });
+        PreviewArea.setCallbacks({
+            onPlay: () => preview.start(),
+            onPause: () => preview.stop(),
+            onReset: () => preview.reset(),
+        });
+        BMSInput.setContent(preview.DEFAULT_BMS);
+        preview.start();
+        PreviewArea.setPlayState(true);
+        analysisPanel.update();
     }
 
     function handleGameChange(presetId) {
@@ -133,9 +144,22 @@ async function init() {
                 newPreset.options,
                 config,
             );
-            OptionService.applyCoverHeights();
+            // 게임별 기본 모니터로 덮어쓰기
+            applyGameMonitor(newPreset);
+            // 이전 렌더러 정지 후 새 게임 렌더러 활성화
+            _activePreview?.stop();
+            activatePreview(newPreset);
         });
         TopBar.setSelectedPreset(presetId);
+    }
+
+    // 선택된 게임의 기본 모니터로 모니터 설정을 덮어쓰고 관련 UI를 갱신한다.
+    function applyGameMonitor(preset) {
+        if (!preset.defaultMonitor) return;
+        Monitor.save(preset.defaultMonitor);
+        TopBar.updateMonitorSummary(Monitor.getSummaryText());
+        MonitorModal.setMonitor(Monitor.getMonitor());
+        analysisPanel.update(); // 노트 속도는 모니터에 의존
     }
 
     function handleHamburger() {
@@ -148,11 +172,6 @@ async function init() {
         document.querySelectorAll(".tab-panel").forEach((el) => {
             el.classList.toggle("tab-active", el.dataset.tab === tabId);
         });
-    }
-
-    function handlePreviewReset() {
-        Preview.stop();
-        Preview.start();
     }
 
     function closeSidebar() {

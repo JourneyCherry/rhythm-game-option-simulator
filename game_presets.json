@@ -1,118 +1,57 @@
 {
-    "defaultPresetId": "default5",
+    "defaultPresetId": "gf_konasute",
     "presets": [
         {
-            "id": "default5",
-            "label": "Default 5-key",
+            "id": "gf_konasute",
+            "label": "기타도라 GF 코나스테",
             "previewAspect": 1.7778,
             "optionsLayout": "rows",
             "optionsDock": "side",
+            "gameProfile": "konasute",
+            "defaultMonitor": {
+                "sizeInches": 32,
+                "widthPx": 1920,
+                "heightPx": 1080,
+                "inputDelayMs": 5,
+                "aspectOverride": null
+            },
             "options": [
                 {
                     "type": "number",
                     "id": "speed",
-                    "label": "Note Speed",
+                    "label": "배속",
                     "min": 0.5,
-                    "max": 10.0,
+                    "max": 20,
                     "step": 0.5,
-                    "defaultValue": 0.5
-                },
-                {
-                    "type": "number",
-                    "id": "sudden",
-                    "label": "Sudden",
-                    "min": 0,
-                    "max": 100,
-                    "step": 1,
-                    "defaultValue": 15
-                },
-                {
-                    "type": "number",
-                    "id": "hidden",
-                    "label": "Hidden",
-                    "min": 0,
-                    "max": 100,
-                    "step": 1,
-                    "defaultValue": 15
-                },
-                {
-                    "type": "select",
-                    "id": "direction",
-                    "label": "Direction",
-                    "options": [
-                        { "value": 1, "label": "Reverse" },
-                        { "value": -1, "label": "Normal" }
+                    "steps": [
+                        0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5,
+                        6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 20.0
                     ],
-                    "defaultValue": 1
-                }
-            ]
-        },
-        {
-            "id": "fast5",
-            "label": "Fast 5-key (cols/bottom)",
-            "previewAspect": 1.7778,
-            "optionsLayout": "cols",
-            "optionsDock": "bottom",
-            "options": [
-                {
-                    "type": "number",
-                    "id": "speed",
-                    "label": "Note Speed",
-                    "min": 0.5,
-                    "max": 10.0,
-                    "step": 0.5,
-                    "defaultValue": 0.9
-                },
-                {
-                    "type": "number",
-                    "id": "sudden",
-                    "label": "Sudden",
-                    "min": 0,
-                    "max": 100,
-                    "step": 1,
-                    "defaultValue": 10
-                },
-                {
-                    "type": "number",
-                    "id": "hidden",
-                    "label": "Hidden",
-                    "min": 0,
-                    "max": 100,
-                    "step": 1,
-                    "defaultValue": 10
-                },
-                {
-                    "type": "select",
-                    "id": "direction",
-                    "label": "Direction",
-                    "options": [
-                        { "value": 1, "label": "Reverse" },
-                        { "value": -1, "label": "Normal" }
-                    ],
-                    "defaultValue": 1
-                }
-            ]
-        },
-        {
-            "id": "portrait5",
-            "label": "Portrait 5-key (9:16)",
-            "previewAspect": 0.5625,
-            "optionsLayout": "rows",
-            "optionsDock": "side",
-            "options": [
-                {
-                    "type": "number",
-                    "id": "speed",
-                    "label": "Note Speed",
-                    "min": 0.5,
-                    "max": 10.0,
-                    "step": 0.5,
                     "defaultValue": 1.0
                 },
                 {
+                    "type": "select",
+                    "id": "direction",
+                    "label": "방향",
+                    "options": [
+                        { "value": -1, "label": "Normal" },
+                        { "value": 1, "label": "Reverse" }
+                    ],
+                    "defaultValue": -1
+                },
+                {
+                    "type": "number",
+                    "id": "judgelinePosition",
+                    "label": "판정선",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
                     "type": "number",
                     "id": "sudden",
-                    "label": "Sudden",
+                    "label": "서든",
                     "min": 0,
                     "max": 100,
                     "step": 1,
@@ -121,21 +60,116 @@
                 {
                     "type": "number",
                     "id": "hidden",
-                    "label": "Hidden",
+                    "label": "히든",
                     "min": 0,
                     "max": 100,
                     "step": 1,
                     "defaultValue": 0
                 },
                 {
+                    "type": "number",
+                    "id": "noteOffset",
+                    "label": "노트 타이밍",
+                    "min": -20,
+                    "max": 20,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
+                    "type": "number",
+                    "id": "judgeOffset",
+                    "label": "판정 타이밍",
+                    "min": -20,
+                    "max": 20,
+                    "step": 1,
+                    "defaultValue": 0
+                }
+            ]
+        },
+        {
+            "id": "gf_arena",
+            "label": "기타도라 GF 아레나",
+            "previewAspect": 1.7778,
+            "optionsLayout": "cols",
+            "optionsDock": "side",
+            "gameProfile": "arena",
+            "defaultMonitor": {
+                "sizeInches": 50,
+                "widthPx": 3840,
+                "heightPx": 2160,
+                "inputDelayMs": 9.5,
+                "aspectOverride": null
+            },
+            "options": [
+                {
+                    "type": "number",
+                    "id": "speed",
+                    "label": "배속",
+                    "min": 0.5,
+                    "max": 20,
+                    "step": 0.25,
+                    "steps": [
+                        0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75,
+                        3.0, 3.25, 3.5, 3.75, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25,
+                        5.5, 5.75, 6.0, 6.25, 6.5, 6.75, 7.0, 7.25, 7.5, 7.75,
+                        8.0, 8.25, 8.5, 8.75, 9.0, 9.25, 9.5, 9.75, 10.0, 20.0
+                    ],
+                    "defaultValue": 1.0
+                },
+                {
                     "type": "select",
                     "id": "direction",
-                    "label": "Direction",
+                    "label": "방향",
                     "options": [
-                        { "value": 1, "label": "Reverse" },
-                        { "value": -1, "label": "Normal" }
+                        { "value": -1, "label": "Normal" },
+                        { "value": 1, "label": "Reverse" }
                     ],
-                    "defaultValue": 1
+                    "defaultValue": -1
+                },
+                {
+                    "type": "number",
+                    "id": "judgelinePosition",
+                    "label": "판정선",
+                    "min": -50,
+                    "max": 150,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
+                    "type": "number",
+                    "id": "sudden",
+                    "label": "서든",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
+                    "type": "number",
+                    "id": "hidden",
+                    "label": "히든",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
+                    "type": "number",
+                    "id": "noteOffset",
+                    "label": "노트 타이밍",
+                    "min": -20,
+                    "max": 20,
+                    "step": 1,
+                    "defaultValue": 0
+                },
+                {
+                    "type": "number",
+                    "id": "judgeOffset",
+                    "label": "판정 타이밍",
+                    "min": -20,
+                    "max": 20,
+                    "step": 1,
+                    "defaultValue": 0
                 }
             ]
         }

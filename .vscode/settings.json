@@ -7,5 +7,9 @@
     "editor.codeActionsOnSave": ["source.fixAll.eslint"],
 
     "files.eol": "\n",
-    "files.insertFinalNewline": true
+    "files.insertFinalNewline": true,
+
+    "[markdown]": {
+        "editor.formatOnSave": false
+    }
 }
