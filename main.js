@@ -19,6 +19,10 @@ async function init() {
     const { defaultPresetId, presetMap } = await loadPresets();
     let currentPreset = presetMap[defaultPresetId];
 
+    // 모니터 설정은 게임에 종속 — 기본 게임의 기본 모니터로 덮어쓴다.
+    // (개인 모니터 영속화는 추후 쿠키 등으로 별도 처리 예정)
+    if (currentPreset.defaultMonitor) Monitor.save(currentPreset.defaultMonitor);
+
     const config = OptionService.initConfig(currentPreset);
 
     const app = document.getElementById("app");
@@ -140,11 +144,22 @@ async function init() {
                 newPreset.options,
                 config,
             );
+            // 게임별 기본 모니터로 덮어쓰기
+            applyGameMonitor(newPreset);
             // 이전 렌더러 정지 후 새 게임 렌더러 활성화
             _activePreview?.stop();
             activatePreview(newPreset);
         });
         TopBar.setSelectedPreset(presetId);
+    }
+
+    // 선택된 게임의 기본 모니터로 모니터 설정을 덮어쓰고 관련 UI를 갱신한다.
+    function applyGameMonitor(preset) {
+        if (!preset.defaultMonitor) return;
+        Monitor.save(preset.defaultMonitor);
+        TopBar.updateMonitorSummary(Monitor.getSummaryText());
+        MonitorModal.setMonitor(Monitor.getMonitor());
+        analysisPanel.update(); // 노트 속도는 모니터에 의존
     }
 
     function handleHamburger() {

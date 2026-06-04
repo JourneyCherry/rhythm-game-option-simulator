@@ -481,23 +481,6 @@ button {
     color: var(--color-text-main);
 }
 
-.gear-btn {
-    background: none;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-main);
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gear-btn:hover {
-    background: #2a2a2a;
-}
-
 /* ====================
    Options Panel
    ==================== */

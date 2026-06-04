@@ -2,13 +2,6 @@ const STORAGE_KEY = "rg-monitor";
 
 const PRESETS = [
     {
-        label: "커스텀",
-        sizeInches: null,
-        widthPx: null,
-        heightPx: null,
-        inputDelayMs: 0,
-    },
-    {
         label: '32" 1920×1080 (아케이드)',
         sizeInches: 32,
         widthPx: 1920,

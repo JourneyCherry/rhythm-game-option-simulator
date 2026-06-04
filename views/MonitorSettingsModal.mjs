@@ -74,7 +74,7 @@ export function init(container, { onSave, monitor }) {
     _presetSelect.addEventListener("change", () => {
         const idx = parseInt(_presetSelect.value, 10);
         const preset = Monitor.getPresets()[idx];
-        if (preset && idx > 0) fillForm(preset);
+        if (preset) fillForm(preset);
     });
     presetGroup.append(_presetSelect);
 
@@ -169,6 +169,11 @@ export function init(container, { onSave, monitor }) {
     // 기존 저장값이 있으면 폼에 채우기
     if (monitor) fillForm(monitor);
     updateAspectDisplay();
+}
+
+/** 외부에서 모니터 데이터가 바뀌었을 때 폼 내용을 갱신합니다. */
+export function setMonitor(data) {
+    if (data) fillForm(data);
 }
 
 /** 모달을 엽니다. required=true 이면 닫기 버튼/백드롭이 비활성화됩니다. */

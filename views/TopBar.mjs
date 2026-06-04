@@ -74,14 +74,7 @@ export function init(container, { presets, currentPresetId, onGameChange, onMoni
     _monitorInfoBtn.setAttribute("aria-label", "모니터 설정");
     _monitorInfoBtn.addEventListener("click", () => _onMonitorClick?.());
 
-    const gearBtn = document.createElement("button");
-    gearBtn.type = "button";
-    gearBtn.className = "gear-btn";
-    gearBtn.setAttribute("aria-label", "모니터 설정");
-    gearBtn.textContent = "⚙";
-    gearBtn.addEventListener("click", () => _onMonitorClick?.());
-
-    right.append(_monitorInfoBtn, gearBtn);
+    right.append(_monitorInfoBtn);
 
     container.append(left, right);
 
