@@ -68,6 +68,7 @@ const PROFILE = {
     hudSpeedBoxSize: 44, // 정사각형 한 변 (px)
     hudSpeedBoxColor: "#0a0a14",
     hudSpeedBoxBorderColor: "#778899",
+    hudSpeedBoxBorderWidth: 2,
     hudSpeedFontColor: "#ffffff",
     hudSpeedFontSize: 22, // 배속 숫자 폰트 크기 (px)
 
@@ -77,6 +78,36 @@ const PROFILE = {
     hudHpBarColorFull: "#ff8800", // 100%
     hudHpBarColorPartial: "#3388ff", // 100% 미만
     hudHpRatio: 1, // 표시용 체력 비율(0~1). 옵션 무관 고정값(현재 만피).
+
+    // 배경
+    bgColor: "#0a0a14", // 화면 전체 배경
+    laneBgColor: "#111120", // 레인 영역 배경
+
+    // 레인 세로 구분선
+    laneDividerColor: "#334455", // 버튼 사이 얇은 세로 구분선
+    laneDividerWidth: 1,
+    buttonDividerColor: "#556677", // 5버튼 영역과 웨일링 영역 사이 굵은 세로선
+    buttonDividerWidth: 2,
+
+    // 박자선/마디선 (가로)
+    barLineColor: "#8899aa", // 마디선 (TEST_MEASURE_BEATS박마다)
+    barLineWidth: 2,
+    beatLineColor: "#334455", // 박자선
+    beatLineWidth: 1,
+
+    // 판정선 색
+    judgeLineColor: "#ffcc00",
+
+    // 노트 테두리
+    noteBorderColor: "rgba(255,255,255,0.4)",
+    noteBorderWidth: 1,
+
+    // 웨일링 화살표 기하 (px)
+    wailingArrowHeight: 40, // 전체 높이
+    wailingArrowHeadHeight: 25, // 화살촉 높이
+    wailingArrowHeadHalfWidth: 22, // 화살촉 반폭
+    wailingArrowShaftHalfWidth: 7, // 몸통 반폭
+    wailingArrowBorderWidth: 2, // 테두리 두께
 
     // 노트 색상 [index 0 미사용, 1~5 = 라인 1~5]
     noteColors: [null, "#ff4444", "#44ff44", "#4444ff", "#ffff44", "#ff44ff"],
@@ -206,13 +237,19 @@ function drawBackground(ctx) {
         buttonRight,
         laneTop,
         laneBottom,
+        bgColor,
+        laneBgColor,
+        laneDividerColor,
+        laneDividerWidth,
+        buttonDividerColor,
+        buttonDividerWidth,
     } = PROFILE;
     const buttonWidth = (buttonRight - laneLeft) / BUTTON_COUNT;
 
-    ctx.fillStyle = "#0a0a14";
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = "#111120";
+    ctx.fillStyle = laneBgColor;
     ctx.fillRect(
         laneLeft,
         laneTop,
@@ -220,8 +257,8 @@ function drawBackground(ctx) {
         laneBottom - laneTop,
     );
 
-    ctx.strokeStyle = "#334455";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = laneDividerColor;
+    ctx.lineWidth = laneDividerWidth;
     for (let i = 1; i < BUTTON_COUNT; i++) {
         const x = laneLeft + i * buttonWidth;
         ctx.beginPath();
@@ -230,8 +267,8 @@ function drawBackground(ctx) {
         ctx.stroke();
     }
 
-    ctx.strokeStyle = "#556677";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = buttonDividerColor;
+    ctx.lineWidth = buttonDividerWidth;
     ctx.beginPath();
     ctx.moveTo(buttonRight, laneTop);
     ctx.lineTo(buttonRight, laneBottom);
@@ -239,7 +276,16 @@ function drawBackground(ctx) {
 }
 
 function drawBeatLines(ctx, songTime) {
-    const { laneLeft, wailingRight, laneTop, laneBottom } = PROFILE;
+    const {
+        laneLeft,
+        wailingRight,
+        laneTop,
+        laneBottom,
+        barLineColor,
+        barLineWidth,
+        beatLineColor,
+        beatLineWidth,
+    } = PROFILE;
     const speed_pps = getSpeedPps(_config);
     const judgeLineY = getInternalJudgeLineY(_config);
     const dir = _config.direction;
@@ -263,8 +309,8 @@ function drawBeatLines(ctx, songTime) {
         if (y < laneTop || y > laneBottom) continue;
 
         const isBar = bi % TEST_MEASURE_BEATS === 0;
-        ctx.strokeStyle = isBar ? "#8899aa" : "#334455";
-        ctx.lineWidth = isBar ? 2 : 1;
+        ctx.strokeStyle = isBar ? barLineColor : beatLineColor;
+        ctx.lineWidth = isBar ? barLineWidth : beatLineWidth;
         ctx.beginPath();
         ctx.moveTo(laneLeft, y);
         ctx.lineTo(wailingRight, y);
@@ -282,6 +328,8 @@ function drawNotes(ctx, songTime) {
         judgeLineThickness,
         judgeLineStrokeWidth,
         noteColors,
+        noteBorderColor,
+        noteBorderWidth,
         wailingColor,
         wailingBorderColor,
     } = PROFILE;
@@ -320,8 +368,8 @@ function drawNotes(ctx, songTime) {
                 const ny = y - noteH / 2;
                 ctx.fillStyle = noteColors[event.lane];
                 ctx.fillRect(x, ny, buttonWidth, noteH);
-                ctx.strokeStyle = "rgba(255,255,255,0.4)";
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = noteBorderColor;
+                ctx.lineWidth = noteBorderWidth;
                 ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
             } else if (event.type === "wailing") {
                 drawWailingArrow(
@@ -339,16 +387,16 @@ function drawNotes(ctx, songTime) {
 }
 
 function drawWailingArrow(ctx, wx, ww, y, dir, fillColor, strokeColor) {
-    const totalH = 40;
-    const headH = 25;
-    const headHW = 22;
-    const shaftHW = 7;
+    const totalH = PROFILE.wailingArrowHeight;
+    const headH = PROFILE.wailingArrowHeadHeight;
+    const headHW = PROFILE.wailingArrowHeadHalfWidth;
+    const shaftHW = PROFILE.wailingArrowShaftHalfWidth;
     const cx = wx + ww / 2;
     const ah = totalH / 2;
 
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = PROFILE.wailingArrowBorderWidth;
     ctx.beginPath();
 
     if (dir === "up") {
@@ -375,15 +423,20 @@ function drawWailingArrow(ctx, wx, ww, y, dir, fillColor, strokeColor) {
 }
 
 function drawJudgeLine(ctx) {
-    const { laneLeft, wailingRight, judgeLineThickness, judgeLineStrokeWidth } =
-        PROFILE;
+    const {
+        laneLeft,
+        wailingRight,
+        judgeLineThickness,
+        judgeLineStrokeWidth,
+        judgeLineColor,
+    } = PROFILE;
     const y = getVisualJudgeLineY(_config);
     const w = wailingRight - laneLeft;
     const h = judgeLineThickness;
     const lw = judgeLineStrokeWidth;
 
     // strokeRect는 선 중앙이 좌표 위에 오므로 lw/2 안쪽으로 inset
-    ctx.strokeStyle = "#ffcc00";
+    ctx.strokeStyle = judgeLineColor;
     ctx.lineWidth = lw;
     ctx.strokeRect(laneLeft + lw / 2, y - h / 2 + lw / 2, w - lw, h - lw);
 }
@@ -478,6 +531,7 @@ function drawFrame(ctx) {
         hudSpeedBoxSize,
         hudSpeedBoxColor,
         hudSpeedBoxBorderColor,
+        hudSpeedBoxBorderWidth,
         hudSpeedFontColor,
         hudSpeedFontSize,
         hudHpBarHeight,
@@ -550,7 +604,7 @@ function drawFrame(ctx) {
     ctx.fillStyle = hudSpeedBoxColor;
     ctx.fillRect(speedBoxX, speedBoxY, hudSpeedBoxSize, hudSpeedBoxSize);
     ctx.strokeStyle = hudSpeedBoxBorderColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = hudSpeedBoxBorderWidth;
     ctx.strokeRect(speedBoxX, speedBoxY, hudSpeedBoxSize, hudSpeedBoxSize);
 
     ctx.fillStyle = hudSpeedFontColor;

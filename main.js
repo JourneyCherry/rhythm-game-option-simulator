@@ -1,6 +1,6 @@
 import { loadPresets } from "./constants/Preset.mjs";
 import * as OptionService from "./services/Option.mjs";
-import * as GFKonastePreview from "./services/GFKonastePreview.mjs";
+import * as GFKonasutePreview from "./services/GFKonasutePreview.mjs";
 import * as GFArenaPreview from "./services/GFArenaPreview.mjs";
 import * as Monitor from "./services/Monitor.mjs";
 import * as Analysis from "./services/Analysis.mjs";
@@ -26,7 +26,7 @@ async function init() {
 
     // gameProfile → 캔버스 렌더러 모듈 맵. 게임 추가 시 여기에 항목을 추가한다.
     const PREVIEWS = {
-        konaste: GFKonastePreview,
+        konasute: GFKonasutePreview,
         arena: GFArenaPreview,
     };
 
@@ -114,9 +114,9 @@ async function init() {
     // ======== 핸들러 ========
 
     // gameProfile에 맞는 캔버스 렌더러를 활성화한다.
-    // 초기 진입과 게임 전환(konaste↔arena 등) 모두 이 함수를 통한다.
+    // 초기 진입과 게임 전환(konasute↔arena 등) 모두 이 함수를 통한다.
     function activatePreview(preset) {
-        const preview = PREVIEWS[preset.gameProfile] ?? GFKonastePreview;
+        const preview = PREVIEWS[preset.gameProfile] ?? GFKonasutePreview;
         _activePreview = preview;
         preview.init({ canvas: PreviewArea.getCanvas(), config });
         PreviewArea.setCallbacks({

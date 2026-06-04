@@ -1,13 +1,13 @@
 {
-    "defaultPresetId": "gf_konaste",
+    "defaultPresetId": "gf_konasute",
     "presets": [
         {
-            "id": "gf_konaste",
+            "id": "gf_konasute",
             "label": "기타도라 GF 코나스테",
             "previewAspect": 1.7778,
             "optionsLayout": "rows",
             "optionsDock": "side",
-            "gameProfile": "konaste",
+            "gameProfile": "konasute",
             "options": [
                 {
                     "type": "number",
