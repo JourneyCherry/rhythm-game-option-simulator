@@ -4,14 +4,12 @@ import * as GFKonasutePreview from "./services/GFKonasutePreview.mjs";
 import * as GFArenaPreview from "./services/GFArenaPreview.mjs";
 import * as Monitor from "./services/Monitor.mjs";
 import * as Analysis from "./services/Analysis.mjs";
-import * as BMSParser from "./services/BMSParser.mjs";
 import * as TopBar from "./views/TopBar.mjs";
 import * as OptionsPanel from "./views/OptionsPanel.mjs";
 import * as PreviewArea from "./views/PreviewArea.mjs";
 import * as AnalysisPanel from "./views/AnalysisPanel.mjs";
 import * as MonitorModal from "./views/MonitorSettingsModal.mjs";
-import * as BMSInput from "./views/BMSInput.mjs";
-import * as MobileTabBar from "./views/MobileTabBar.mjs";
+import * as MobilePreviewTabs from "./views/MobilePreviewTabs.mjs";
 
 async function init() {
     Monitor.init();
@@ -91,35 +89,32 @@ async function init() {
         monitor: Monitor.getMonitor(),
     });
 
-    // ---- BMSInput ----
-    // 하나의 DOM 요소를 뷰포트에 따라 footer ↔ 셋업탭 사이에서 이동
-    const bmsEl = BMSInput.create({
-        onParse: (text) => BMSParser.parse(text),
-    });
-    document.getElementById("footer-bms").appendChild(bmsEl);
+    // ---- 모바일 상단 세그먼트 탭 ([프리뷰][분석]) ----
+    // 모바일에선 상단 존(#preview-area)에서 프리뷰↔분석을 전환하고, 옵션은 항상 아래에 표시된다.
+    const previewArea = document.getElementById("preview-area");
+    const analysisEl = document.getElementById("analysis-panel");
 
+    const segTabsEl = document.createElement("div");
+    previewArea.prepend(segTabsEl);
+    MobilePreviewTabs.init(segTabsEl, {
+        onModeChange: (mode) => {
+            previewArea.classList.toggle("mode-analysis", mode === "analysis");
+        },
+    });
+
+    // 분석 패널 위치 동기화: 모바일=상단 존(#preview-area) 내부, 그 외=그리드 영역(#app 직속).
+    // (그리드 배치는 grid-area로 결정되므로 #app 내 DOM 순서는 무관)
     const mobileQuery = window.matchMedia("(max-width: 767px)");
-    function syncBmsPosition(e) {
-        const target = e.matches
-            ? document.getElementById("mobile-bms")
-            : document.getElementById("footer-bms");
-        target.appendChild(bmsEl);
+    function syncAnalysisPosition(e) {
+        if (e.matches) previewArea.appendChild(analysisEl);
+        else app.appendChild(analysisEl);
     }
-    mobileQuery.addEventListener("change", syncBmsPosition);
-    syncBmsPosition(mobileQuery);
-
-    // ---- MobileTabBar ----
-    MobileTabBar.init(document.getElementById("mobile-tab-bar"), {
-        onTabChange: handleTabChange,
-        initialTab: "options",
-    });
+    mobileQuery.addEventListener("change", syncAnalysisPosition);
+    syncAnalysisPosition(mobileQuery);
 
     // ---- 사이드바 백드롭 ----
     const backdrop = document.getElementById("sidebar-backdrop");
     backdrop.addEventListener("click", closeSidebar);
-
-    // 초기 탭 상태 적용
-    handleTabChange("options");
 
     // 기본 프리셋의 렌더러로 시작
     activatePreview(currentPreset);
@@ -137,7 +132,6 @@ async function init() {
             onPause: () => preview.stop(),
             onReset: () => preview.reset(),
         });
-        BMSInput.setContent(preview.DEFAULT_BMS);
         preview.start();
         PreviewArea.setPlayState(true);
         analysisPanel.update();
@@ -175,12 +169,6 @@ async function init() {
         const panel = document.getElementById("options-panel");
         const isOpen = panel.classList.toggle("sidebar-open");
         backdrop.classList.toggle("active", isOpen);
-    }
-
-    function handleTabChange(tabId) {
-        document.querySelectorAll(".tab-panel").forEach((el) => {
-            el.classList.toggle("tab-active", el.dataset.tab === tabId);
-        });
     }
 
     function closeSidebar() {

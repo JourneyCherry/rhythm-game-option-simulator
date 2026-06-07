@@ -1,6 +1,8 @@
 // 기타도라 GF 코나스테 렌더러
 // 프로파일·로직 모두 이 파일에서 관리한다.
 
+import * as BMSParser from "./BMSParser.mjs";
+
 const PROFILE = {
     width: 1920,
     height: 1080,
@@ -115,34 +117,44 @@ const PROFILE = {
     wailingBorderColor: "#ffffff",
 };
 
-// ---- 테스트 패턴 상수 ----
+// ---- 노트 레인 해석 ----
+// BMS 채널 둘째 자리 = 레인 번호. 이 렌더러는 레인 1~5를 5버튼 노트로,
+// 6/7을 웨일링↑/↓, 8을 프레이즈 경계로 해석하고 그 외 레인은 무시(버림)한다.
+// 스크립트에 없는 레인은 빈 레인으로 둔다(노트가 내려오지 않음).
+const BUTTON_COUNT = 5; // 5버튼 = 레인 1~5
+const WAILING_LANE_UP = 6; // 채널 16
+const WAILING_LANE_DOWN = 7; // 채널 17
+const PHRASE_LANE = 8; // 채널 18 — 프레이즈(달성률 구간) 경계. 화면엔 안 그림.
 
-const TEST_BPM = 120;
-const TEST_BEAT_DURATION = 60 / TEST_BPM; // 0.5s
-const TEST_MEASURE_BEATS = 4;
-const TEST_MEASURES = 2;
-const TEST_LOOP_DURATION =
-    TEST_MEASURES * TEST_MEASURE_BEATS * TEST_BEAT_DURATION; // 4s
-const BUTTON_COUNT = 5;
-
-function buildTestSchedule() {
-    const schedule = [];
-    const totalBeats = TEST_MEASURES * TEST_MEASURE_BEATS;
-    for (let beat = 0; beat < totalBeats; beat++) {
-        const time = beat * TEST_BEAT_DURATION;
-        for (let lane = 1; lane <= BUTTON_COUNT; lane++) {
-            schedule.push({ time, type: "note", lane });
-        }
-        schedule.push({
-            time,
-            type: "wailing",
-            dir: beat % 2 === 0 ? "up" : "down",
-        });
-    }
-    return schedule;
+// 고정 BMS(DEFAULT_BMS)를 파싱한다. 실패 시 빈 차트로 폴백.
+function loadChart() {
+    const parsed = BMSParser.parse(DEFAULT_BMS);
+    if (parsed.ok) return parsed;
+    return {
+        notes: [],
+        cycle: { measureCount: 0, timeMs: 1 },
+        timing: { initialBpm: 120, bpmEvents: [], measures: [] },
+    };
 }
 
-const TEST_SCHEDULE = buildTestSchedule();
+// 프레이즈(기타도라 달성률 구간) 경계 계산.
+// 곡을 n등분한 구간이며 구간 사이 빈 곳은 없다. PHRASE_LANE 노트 = 각 프레이즈의 "끝".
+// BMS는 노트 외 사운드(BGM 등)가 있어 스크립트만으론 실제 곡 끝을 알 수 없으므로,
+// 마지막 프레이즈 노트가 곡 끝을 정의한다(그 노트가 든 마디의 끝 = 곡 끝 = 루프 지점 = cycle.timeMs).
+// 따라서 프레이즈 수 = 프레이즈 노트 수. 첫 프레이즈는 곡 시작(0)부터 시작한다.
+// (마지막 프레이즈 노트는 모든 게임플레이 노트보다 뒤여야 한다 — 스크립트 작성 규칙.)
+function computePhrases(chart) {
+    const ends = chart.notes
+        .filter((n) => n.lane === PHRASE_LANE && n.timeMs > 0)
+        .map((n) => n.timeMs)
+        .sort((a, b) => a - b);
+    const bounds = [0, ...ends];
+    const phrases = [];
+    for (let i = 0; i + 1 < bounds.length; i++) {
+        phrases.push({ startMs: bounds[i], endMs: bounds[i + 1] });
+    }
+    return phrases;
+}
 
 // ---- 모듈 상태 ----
 
@@ -151,6 +163,8 @@ let _config = null;
 let _running = false;
 let _songTime = 0;
 let _lastFrameTime = 0;
+let _chart = null; // 파싱된 BMS 차트 (notes, cycle, timing)
+let _phrases = []; // 프레이즈 경계 구간 [{ startMs, endMs }, ...]
 
 // ---- 유틸 ----
 
@@ -300,15 +314,24 @@ function drawBeatLines(ctx, songTime) {
     const tMin = songTime + tMinOff;
     const tMax = songTime + tMaxOff;
 
-    const firstBeatIdx = Math.ceil(tMin / TEST_BEAT_DURATION);
-    const lastBeatIdx = Math.floor(tMax / TEST_BEAT_DURATION);
+    // 박자/마디선은 파싱된 BPM·마디 길이에서 도출한다.
+    // (현재 고정 스크립트는 단일 BPM·균일 4/4 — 첫 마디 박자수를 기준으로 삼는다.
+    //  변속·가변 마디 길이의 정밀 처리는 추후 과제.)
+    const beatDur = 60 / _chart.timing.initialBpm;
+    const measureBeats = _chart.timing.measures[0]?.beats ?? 4;
+    const cycleSec = _chart.cycle.timeMs / 1000;
+
+    const firstBeatIdx = Math.ceil(tMin / beatDur);
+    const lastBeatIdx = Math.floor(tMax / beatDur);
 
     for (let bi = firstBeatIdx; bi <= lastBeatIdx; bi++) {
-        const t = bi * TEST_BEAT_DURATION;
+        const t = bi * beatDur;
+        // 한 사이클([0, cycle))의 박자/마디선만 그린다(다음 사이클 미리 그리지 않음).
+        if (t < 0 || t >= cycleSec) continue;
         const y = getNoteY(judgeLineY, dir, t, songTime, speed_pps);
         if (y < laneTop || y > laneBottom) continue;
 
-        const isBar = bi % TEST_MEASURE_BEATS === 0;
+        const isBar = bi % measureBeats === 0;
         ctx.strokeStyle = isBar ? barLineColor : beatLineColor;
         ctx.lineWidth = isBar ? barLineWidth : beatLineWidth;
         ctx.beginPath();
@@ -351,38 +374,37 @@ function drawNotes(ctx, songTime) {
     const tMin = songTime + tMinOff;
     const tMax = songTime + tMaxOff;
 
-    const loopStart = Math.floor(tMin / TEST_LOOP_DURATION);
-    const loopEnd = Math.ceil(tMax / TEST_LOOP_DURATION);
+    // 한 사이클(현재 재생 중인 곡)의 노트만 그린다. 인접 사이클을 미리 그리지 않으므로
+    // 곡이 끝나기 전에 다음 사이클 노트가 등장하지 않는다(루프는 loop()가 songTime 되감기로 처리).
+    for (const note of _chart.notes) {
+        const t = note.timeMs / 1000;
+        if (t < tMin || t > tMax) continue;
+        if (t < songTime) continue;
 
-    for (let loopN = loopStart; loopN <= loopEnd; loopN++) {
-        for (const event of TEST_SCHEDULE) {
-            const t = loopN * TEST_LOOP_DURATION + event.time;
-            if (t < tMin || t > tMax) continue;
-            if (t < songTime) continue;
+        const y = getNoteY(judgeLineY, dir, t, songTime, speed_pps);
+        if (y < laneTop || y > laneBottom) continue;
 
-            const y = getNoteY(judgeLineY, dir, t, songTime, speed_pps);
-            if (y < laneTop || y > laneBottom) continue;
-
-            if (event.type === "note") {
-                const x = laneLeft + (event.lane - 1) * buttonWidth;
-                const ny = y - noteH / 2;
-                ctx.fillStyle = noteColors[event.lane];
-                ctx.fillRect(x, ny, buttonWidth, noteH);
-                ctx.strokeStyle = noteBorderColor;
-                ctx.lineWidth = noteBorderWidth;
-                ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
-            } else if (event.type === "wailing") {
-                drawWailingArrow(
-                    ctx,
-                    buttonRight,
-                    wailingWidth,
-                    y,
-                    event.dir,
-                    wailingColor,
-                    wailingBorderColor,
-                );
-            }
+        const lane = note.lane;
+        if (lane >= 1 && lane <= BUTTON_COUNT) {
+            const x = laneLeft + (lane - 1) * buttonWidth;
+            const ny = y - noteH / 2;
+            ctx.fillStyle = noteColors[lane];
+            ctx.fillRect(x, ny, buttonWidth, noteH);
+            ctx.strokeStyle = noteBorderColor;
+            ctx.lineWidth = noteBorderWidth;
+            ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
+        } else if (lane === WAILING_LANE_UP || lane === WAILING_LANE_DOWN) {
+            drawWailingArrow(
+                ctx,
+                buttonRight,
+                wailingWidth,
+                y,
+                lane === WAILING_LANE_UP ? "up" : "down",
+                wailingColor,
+                wailingBorderColor,
+            );
         }
+        // 그 외 레인: 이 렌더러가 사용하지 않음 → 버림
     }
 }
 
@@ -632,8 +654,40 @@ function drawFrame(ctx) {
 
 // ---- 메인 드로우 / 루프 ----
 
+// 사이클 시작 songTime(초). 음수 = 리드인: 첫 노트가 레인 맨 위에서 등장해
+// 판정선까지 내려오는 시간만큼 앞당겨 시작한다(노트가 위에서 새로 내려오는 느낌).
+// = 노트가 등장 가장자리에서 판정선까지 이동하는 시간(tMaxOff).
+function getCycleStartTime() {
+    const speed_pps = getSpeedPps(_config);
+    const judgeLineY = getInternalJudgeLineY(_config);
+    const [, tMaxOff] = getVisibleTimeOffsets(
+        judgeLineY,
+        _config.direction,
+        speed_pps,
+        PROFILE.laneTop,
+        PROFILE.laneBottom,
+    );
+    return -Math.max(0, tMaxOff);
+}
+
+// 현재 사이클의 시각 요소가 화면에서 모두 빠졌는지. 노트는 판정선에서 사라지므로
+// 곡 끝(cycle) 이후엔 박자선만 가장자리로 빠지면 화면이 빈다 — 그 박자선 잔류를 검사한다.
+function isFieldEmpty(songTime) {
+    const speed_pps = getSpeedPps(_config);
+    const judgeLineY = getInternalJudgeLineY(_config);
+    const dir = _config.direction;
+    const { laneTop, laneBottom } = PROFILE;
+    const beatDur = 60 / _chart.timing.initialBpm;
+    const cycleSec = _chart.cycle.timeMs / 1000;
+    for (let t = 0; t < cycleSec; t += beatDur) {
+        const y = getNoteY(judgeLineY, dir, t, songTime, speed_pps);
+        if (y >= laneTop && y <= laneBottom) return false;
+    }
+    return true;
+}
+
 function draw() {
-    if (!_canvas || !_config) return;
+    if (!_canvas || !_config || !_chart) return;
     const ctx = _canvas.getContext("2d");
     drawBackground(ctx);
     drawBeatLines(ctx, _songTime);
@@ -649,6 +703,12 @@ function loop(now) {
     const dt = (now - _lastFrameTime) / 1000;
     _lastFrameTime = now;
     _songTime += dt;
+    // 곡 끝(cycle)을 지나 화면이 완전히 빈 뒤 리드인 지점으로 되감아 재시작한다.
+    // → 다음 사이클 노트가 현재 사이클이 끝나기 전에 등장하지 않는다.
+    const cycleSec = _chart.cycle.timeMs / 1000;
+    if (cycleSec > 0 && _songTime >= cycleSec && isFieldEmpty(_songTime)) {
+        _songTime = getCycleStartTime();
+    }
     draw();
     requestAnimationFrame(loop);
 }
@@ -660,7 +720,12 @@ function loop(now) {
 // 모니터가 게임보다 가로로 길면 세로 기준, 세로로 길면 가로 기준으로 맞춘다.
 // metrics({ pixelPitchMm, widthPx, heightPx })가 없거나 부족하면 null.
 function computeNoteSpeedCmPerSec(speed_pps, metrics) {
-    if (!metrics || !metrics.pixelPitchMm || !metrics.widthPx || !metrics.heightPx) {
+    if (
+        !metrics ||
+        !metrics.pixelPitchMm ||
+        !metrics.widthPx ||
+        !metrics.heightPx
+    ) {
         return null;
     }
     const { pixelPitchMm, widthPx, heightPx } = metrics;
@@ -698,7 +763,8 @@ export function getAnalysis(cfg, monitorMetrics) {
 
     // 커버 경계 — drawCovers와 동일 공식.
     const topCoverEdge = (v) => PROFILE.suddenBaseY + PROFILE.coverPerUnit * v;
-    const bottomCoverEdge = (v) => PROFILE.hiddenBaseY - PROFILE.coverPerUnit * v;
+    const bottomCoverEdge = (v) =>
+        PROFILE.hiddenBaseY - PROFILE.coverPerUnit * v;
 
     // appearY(처음 보이는 위치): 노트 등장 마스크 + 서든.
     // disappearY(사라지는 위치): 판정선 + 히든(판정선을 덮으면 히든 경계가 우선).
@@ -710,7 +776,8 @@ export function getAnalysis(cfg, monitorMetrics) {
             hidden > 0 ? Math.min(judgeY, bottomCoverEdge(hidden)) : judgeY;
     } else {
         // Normal(아래→위): 서든=하단 커버, 히든=상단 커버.
-        appearY = sudden > 0 ? Math.min(spawnY, bottomCoverEdge(sudden)) : spawnY;
+        appearY =
+            sudden > 0 ? Math.min(spawnY, bottomCoverEdge(sudden)) : spawnY;
         disappearY =
             hidden > 0 ? Math.max(judgeY, topCoverEdge(hidden)) : judgeY;
     }
@@ -737,7 +804,9 @@ export function init({ canvas, config }) {
     _canvas = canvas;
     _config = config;
     _running = false;
-    _songTime = 0;
+    _chart = loadChart();
+    _phrases = computePhrases(_chart);
+    _songTime = getCycleStartTime(); // 리드인부터 시작
     // 캔버스 내부 해상도를 게임 원본 해상도로 설정
     // CSS width/height:100%가 프리뷰 영역에 맞게 스케일해줌
     _canvas.width = PROFILE.width;
@@ -757,26 +826,79 @@ export function stop() {
 
 export function reset() {
     _running = false;
-    _songTime = 0;
+    _songTime = getCycleStartTime();
 }
 
-export const DEFAULT_BMS = `#BPM 120
+// 프레이즈(달성률 구간) 정보. 향후 판정/달성률 표시 기능에서 사용.
+export function getPhraseInfo() {
+    return { count: _phrases.length, phrases: _phrases };
+}
+
+export const DEFAULT_BMS = `#BPM 175
 #PLAYER 1
 #TITLE GF Test Pattern
 #ARTIST -
 
-*-- 2마디, 4/4박자, 4분음표, 전 라인 + 웨일링
-*-- Channel 11=R(1), 12=G(2), 13=B(3), 14=Y(4), 15=P(5)
-*-- 웨일링 채널은 기타도라 BMS 포맷 확인 후 추가 예정
+*-- 11~15 = 5버튼(R/G/B/Y/P), 16 = 웨일링↑, 17 = 웨일링↓, 18 = 프레이즈 경계(각 노트 = 그 프레이즈의 끝).
 
-#00111:01010101
-#00112:01010101
-#00113:01010101
-#00114:01010101
-#00115:01010101
+*-- 마디 0: beat0=1, beat1=2, beat2=3, beat3=4
+#00011:00
 
-#00211:01010101
-#00212:01010101
-#00213:01010101
-#00214:01010101
-#00215:01010101`;
+#00111:01000000010001010100010001000100
+#00112:01000000010001000000010000000000
+#00113:00000000000001000000000000000000
+#00114:00000000000001000000000000000000
+#00115:00000000000001000000000000000000
+
+#00211:01000100010001000100010001000100
+#00212:01000000000001000000010000000000
+#00213:00000000000000000000000000000000
+#00214:00000000000000000000000000000000
+#00215:00000000000000000000000000000000
+
+#00311:00000000000000010100000001000000
+#00312:01000000010001010100010001000100
+#00313:01000000010000010100010001000100
+#00314:00000000000000010100000001000000
+#00315:00000000000000010100000001000000
+
+#00411:01000000000000000000000000000100
+#00412:01000000000001000000000001000000
+#00413:01000100010000000000010000000000
+#00414:01000001000000000100000000000000
+#00415:01000000000000000000000000000000
+
+#00511:00000000000000010100000001000000
+#00512:00000000000000010100000001000000
+#00513:01000000010001010100010001000100
+#00514:01000000010001010100010001000100
+#00515:00000000000000010100000001000000
+#00518:01000000000000000000000000000000
+
+#00611:01000000000000000000000000000000
+#00612:01000000000000000000000001000000
+#00613:01000000000001000000010000000000
+#00614:01000100010000000100000000000000
+#00615:01000001000000000000000000000000
+
+#00711:01010101000000000000000000000000
+#00712:00000000010101010000000000000000
+#00713:00000000000000000101010100000000
+#00714:00000000000000000000000001010101
+#00715:00000000000000000000000000000000
+
+#00811:00000000000000000000000000000000
+#00812:01010101000000000000000000000000
+#00813:00000000010101010000000000000000
+#00814:00000000000000000101010100000000
+#00815:00000000000000000000000001010101
+
+#00911:00000000000000000000000000000000
+#00912:01000000000000000000000000000000
+#00913:00000000000000000000000000000000
+#00914:01000000000000000000000000000000
+#00915:00000000000000000000000000000000
+#00918:00000000000000000000000000000000
+
+#01018:01
+`;
