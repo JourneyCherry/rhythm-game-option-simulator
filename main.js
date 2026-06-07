@@ -70,6 +70,15 @@ async function init() {
             OptionService.applyOptionChange(id, value);
             analysisPanel.update();
         },
+        // 프리셋(버튼형) 옵션: applies 맵을 config에 일괄 반영하고 패널을 재렌더해
+        // 영향받은 옵션의 슬라이더/칩 표시를 갱신한다. 프리셋 버튼 자체는 무상태.
+        onApplyPreset: (applies) => {
+            for (const [k, v] of Object.entries(applies)) {
+                OptionService.applyOptionChange(k, v);
+            }
+            OptionsPanel.render(currentPreset.options, config);
+            analysisPanel.update();
+        },
     });
 
     // ---- MonitorSettingsModal ----

@@ -508,7 +508,9 @@ button {
 .options-panel-inner.layout-rows {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    /* 옵션 사이 간격은 같은 옵션 내 칩 줄 간격(아래 row-gap 3px)보다 넓게 둬서,
+       칩이 두 줄로 감겨도 옆 옵션과 명확히 구분되어 "침범"처럼 보이지 않게 한다. */
+    gap: 6px;
     padding: 10px 12px;
     overflow-y: auto;
 }
@@ -518,6 +520,10 @@ button {
     align-items: center;
     gap: 10px;
     min-height: 36px;
+    /* 세로 flex 컨테이너에서 옵션이 패널 높이를 넘으면 자식이 min-height까지 찌그러져
+       두 줄 칩이 박스를 넘쳐 위아래를 침범한다. flex-shrink:0으로 각 셀이 내용만큼의
+       높이를 유지하게 하고, 넘치는 분은 패널의 overflow-y로 스크롤한다. */
+    flex-shrink: 0;
 }
 
 .options-panel-inner.layout-rows .option-label {
@@ -573,6 +579,11 @@ button {
     gap: 5px;
 }
 
+/* rows: 칩이 두 줄로 감길 때 줄 사이(row-gap)는 좁게, 칩 사이(column-gap)는 5px 유지 */
+.options-panel-inner.layout-rows .chip-list {
+    row-gap: 3px;
+}
+
 .options-panel-inner.layout-cols .chip-list {
     flex-direction: column;
     flex-wrap: nowrap;
@@ -580,17 +591,65 @@ button {
 }
 
 .chip {
-    padding: 4px 12px;
+    padding: 4px 10px;
     border-radius: 99px;
     border: 1px solid var(--color-chip-border);
     background: var(--color-chip-bg);
     color: var(--color-text-main);
-    font-size: 0.82rem;
-    white-space: nowrap;
+    font-size: 0.8rem;
+    /* 긴 칩 라벨(예: "프레이즈/클리어미터 OFF")은 좁은 패널에서 한 줄을 넘으므로
+       줄바꿈을 허용해 칩 안에서 감기게 한다 — 좁은 폭을 넘어 삐져나오지 않음 (방식 3). */
+    white-space: normal;
+    overflow-wrap: anywhere;
     transition:
         background 0.12s,
         border-color 0.12s;
     line-height: 1.4;
+}
+
+/* 프리셋(버튼형) 옵션: 토글 칩(둥근 모서리)과 구분되도록 각진 버튼 모양 */
+.chip.preset-chip {
+    border-radius: 6px;
+}
+
+/* 비활성 칩 (현재 프리셋 버튼은 실측값 확보 전까지 disabled) */
+.chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ====================
+   옵션 설명 툴팁
+   ==================== */
+
+/* body 직속으로 붙는 단일 툴팁 요소 (JS가 위치·표시 제어) */
+.option-tooltip {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    max-width: 240px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--color-modal-bg);
+    border: 1px solid var(--color-modal-border);
+    color: var(--color-text-main);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    /* pre-line: 일반 공백은 합치되 description의 개행(\n)은 줄바꿈으로 렌더 */
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    /* 툴팁이 클릭을 가로채면 바깥 클릭 닫기·컨트롤 조작을 방해하므로 통과시킴 */
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s;
+}
+
+.option-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 .chip:hover {
