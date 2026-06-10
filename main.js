@@ -67,6 +67,8 @@ async function init() {
         onChange: (id, value) => {
             OptionService.applyOptionChange(id, value);
             analysisPanel.update();
+            // 일시정지 중에도 변경을 즉시 반영(재생 중에는 무해한 추가 1프레임).
+            _activePreview?.redraw();
         },
         // 프리셋(버튼형) 옵션: applies 맵을 config에 일괄 반영하고 패널을 재렌더해
         // 영향받은 옵션의 슬라이더/칩 표시를 갱신한다. 프리셋 버튼 자체는 무상태.
@@ -76,6 +78,7 @@ async function init() {
             }
             OptionsPanel.render(currentPreset.options, config);
             analysisPanel.update();
+            _activePreview?.redraw();
         },
     });
 

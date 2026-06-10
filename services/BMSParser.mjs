@@ -7,6 +7,10 @@
  * - 노트의 "언제 쳐져야 하는가(timeMs)"는 BPM 타임라인만으로 결정되는 게임 독립
  *   연산이므로 파서가 산출한다. "어디에 그려지는가(px)"는 렌더러가 담당한다.
  * - 변속(BPM 변화) 지원 구조를 갖추되(채널 03/08), 현재 고정 스크립트엔 사용하지 않는다.
+ * - 롱노트는 두 표준 방식을 지원한다: 채널 5x(LNTYPE 1 — 같은 레인의 시작/끝 오브젝트 쌍)와
+ *   #LNOBJ(채널 1x에서 지정 값이 직전 노트를 끝내는 종료 마커). 결과 노트는 endTimeMs를 가진다
+ *   (롱노트면 끝 시각, 탭이면 null). LNTYPE 2(구식 MGQ 방식)는 지원하지 않는다.
+ * - STOP(채널 09)과 P2(채널 2x)는 구현하지 않는다(기타도라엔 불필요). 비가시 노트(3x/4x)·지뢰(Dx)도 무시.
  *
  * 참고(검증 출처):
  *   - BMS command memo (hitkey): https://hitkey.bms.ms/cmds.htm
@@ -61,9 +65,10 @@ function reducePosition(i, n) {
  *              measures: Array<{index:number, beats:number}> },
  *   cycle?: { measureCount: number, timeMs: number },
  *   notes?: Array<{ lane:number, value:string, measure:number,
- *                   position:[number,number], timeMs:number }>,
+ *                   position:[number,number], timeMs:number, endTimeMs:number|null }>,
  * }}
  *   - notes는 timeMs 오름차순 정렬. 레인 번호는 채널 둘째 자리 base36 값.
+ *   - endTimeMs: 롱노트의 끝 시각(ms). 탭 노트는 null.
  *   - cycle.timeMs = 곡 전체 길이(= 1 루프 사이클).
  */
 export function parse(text, { defaultMeasureBeats = 4, defaultBpm = 130 } = {}) {
@@ -78,6 +83,8 @@ export function parse(text, { defaultMeasureBeats = 4, defaultBpm = 130 } = {}) 
         laneCount: 0,
     };
     const bpmDefs = {}; // #BPMxx → bpm (확장 BPM 정의)
+    let lnobj = null; // #LNOBJ — 채널 1x에서 롱노트 끝을 나타내는 오브젝트 값(대문자)
+    let lntype = 1; // #LNTYPE — 1=채널 5x 시작/끝 쌍(지원). 2(MGQ)는 미지원
 
     // measureData: Map<마디번호, Map<채널, string[]>> (같은 마디·채널 중복 라인은 누적)
     const measureData = new Map();
@@ -126,7 +133,13 @@ export function parse(text, { defaultMeasureBeats = 4, defaultBpm = 130 } = {}) 
             case "PLAYLEVEL":
                 meta.playLevel = parseInt(value, 10);
                 break;
-            // RANK·LNTYPE·LNOBJ·WAVxx·STOPxx 등은 현재 스코프 외 — 무시
+            case "LNOBJ":
+                lnobj = value.toUpperCase().slice(0, 2) || null;
+                break;
+            case "LNTYPE":
+                lntype = parseInt(value, 10) || 1;
+                break;
+            // RANK·WAVxx 등은 무시. STOPxx(채널 09)는 구현하지 않음.
             default:
                 break;
         }
@@ -199,8 +212,11 @@ export function parse(text, { defaultMeasureBeats = 4, defaultBpm = 130 } = {}) 
         return ms;
     };
 
-    // ---- 5. P1 가시 노트(채널 1x) → 레인별 노트 오브젝트 ----
-    const notes = [];
+    // ---- 5. P1 가시 노트 → 레인별 노트 오브젝트 ----
+    // 채널 1x(탭/LNOBJ 롱노트)와 5x(LNTYPE 1 롱노트)를 다룬다. LNOBJ 종료·5x 쌍 매칭은
+    // 마디 경계를 넘어 시간순으로 처리해야 올바르므로, 먼저 레인별로 모아 정렬한 뒤 해석한다.
+    const tapEventsByLane = new Map(); // 채널 1x: lane → [{beat, value, measure, position}]
+    const lnEventsByLane = new Map(); // 채널 5x: lane → [{beat, value, measure, position}]
     for (let m = 0; m < measureCount; m++) {
         const chMap = measureData.get(m);
         if (!chMap) continue;
@@ -208,25 +224,81 @@ export function parse(text, { defaultMeasureBeats = 4, defaultBpm = 130 } = {}) 
         const beatsInMeasure = measures[m].beats;
 
         for (const [channel, dataArr] of chMap) {
-            if (channel[0] !== "1") continue; // P1 가시 노트만
+            const cat = channel[0];
+            if (cat !== "1" && cat !== "5") continue; // P1 가시 노트(1x)·P1 롱노트(5x)만
             const lane = base36(channel[1]); // 레인 번호 = 둘째 자리
+            const target = cat === "1" ? tapEventsByLane : lnEventsByLane;
+            if (!target.has(lane)) target.set(lane, []);
+            const bucket = target.get(lane);
             for (const data of dataArr) {
                 const objs = splitObjects(data);
                 const n = objs.length;
                 objs.forEach((obj, i) => {
                     if (obj === "00") return;
-                    const beat = start + (i / n) * beatsInMeasure;
-                    notes.push({
-                        lane,
-                        value: obj,
+                    bucket.push({
+                        beat: start + (i / n) * beatsInMeasure,
+                        value: obj.toUpperCase(),
                         measure: m,
                         position: reducePosition(i, n),
-                        timeMs: beatToMs(beat),
                     });
-                    if (lane > meta.laneCount) meta.laneCount = lane;
                 });
             }
         }
+    }
+
+    const notes = [];
+    const noteLanes = new Set();
+
+    // 5a. 채널 1x: 탭 노트. #LNOBJ 값을 만나면 같은 레인의 직전 노트를 롱노트로 종료한다.
+    for (const [lane, events] of tapEventsByLane) {
+        events.sort((a, b) => a.beat - b.beat);
+        let lastNote = null; // 이 레인에서 마지막으로 추가한 (아직 닫히지 않은) 탭 노트
+        for (const ev of events) {
+            if (lnobj && ev.value === lnobj) {
+                // 롱노트 종료 마커: 직전 노트를 롱노트로 만들고, 마커 자체는 노트로 두지 않는다.
+                if (lastNote) {
+                    lastNote.endTimeMs = beatToMs(ev.beat);
+                    lastNote = null;
+                }
+                continue;
+            }
+            const note = {
+                lane,
+                value: ev.value,
+                measure: ev.measure,
+                position: ev.position,
+                timeMs: beatToMs(ev.beat),
+                endTimeMs: null,
+            };
+            notes.push(note);
+            noteLanes.add(lane);
+            lastNote = note;
+        }
+    }
+
+    // 5b. 채널 5x(LNTYPE 1): 시간순 오브젝트를 (시작, 끝) 쌍으로 묶어 롱노트로 만든다.
+    // LNTYPE 2(MGQ 방식)는 미지원이라 5x 채널을 해석하지 않고 버린다.
+    if (lntype === 1) {
+        for (const [lane, events] of lnEventsByLane) {
+            events.sort((a, b) => a.beat - b.beat);
+            for (let i = 0; i < events.length; i += 2) {
+                const head = events[i];
+                const tail = events[i + 1]; // 짝이 없으면(홀수) endTimeMs=null인 탭으로 떨어진다.
+                notes.push({
+                    lane,
+                    value: head.value,
+                    measure: head.measure,
+                    position: head.position,
+                    timeMs: beatToMs(head.beat),
+                    endTimeMs: tail ? beatToMs(tail.beat) : null,
+                });
+                noteLanes.add(lane);
+            }
+        }
+    }
+
+    for (const lane of noteLanes) {
+        if (lane > meta.laneCount) meta.laneCount = lane;
     }
     notes.sort((a, b) => a.timeMs - b.timeMs || a.lane - b.lane);
 
