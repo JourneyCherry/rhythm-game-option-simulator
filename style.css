@@ -10,14 +10,11 @@
     --options-panel-width: 260px;
     --analysis-panel-width: 180px;
     --top-bar-height: 52px;
-    --mobile-tab-bar-height: 52px;
-    --footer-height: auto;
 
     /* 색상 */
     --color-bg-body: #111;
     --color-bg-panel: #1a1a1a;
     --color-bg-top-bar: #1e1e1e;
-    --color-bg-footer: #181818;
     --color-text-main: #eee;
     --color-text-muted: #999;
     --color-border: #333;
@@ -34,8 +31,7 @@
     --color-modal-bg: #222;
     --color-modal-border: #3a3a3a;
 
-    /* 탭 바 */
-    --color-tab-bar-bg: #1a1a1a;
+    /* 탭 */
     --color-tab-active: #3b7fe8;
     --color-tab-inactive: #666;
 }
@@ -79,10 +75,9 @@ button {
         grid-template-areas:
             "title   title    title"
             "header  header   header"
-            "options preview  analysis"
-            "footer  footer   footer";
+            "options preview  analysis";
         grid-template-columns: var(--options-panel-width) 1fr var(--analysis-panel-width);
-        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr;
         height: 100dvh;
         overflow: hidden;
     }
@@ -94,10 +89,9 @@ button {
             "title   title    title"
             "header  header   header"
             ".       preview  analysis"
-            "options options  options"
-            "footer  footer   footer";
+            "options options  options";
         grid-template-columns: 60px 1fr var(--analysis-panel-width);
-        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto auto;
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
         height: 100dvh;
         overflow: hidden;
     }
@@ -117,16 +111,6 @@ button {
     #analysis-panel {
         grid-area: analysis;
     }
-    #footer-area {
-        grid-area: footer;
-    }
-
-    /* 모바일 전용 요소 숨김 */
-    #setup-panel,
-    #bms-panel,
-    #mobile-tab-bar {
-        display: none !important;
-    }
 }
 
 /* ====================
@@ -140,10 +124,9 @@ button {
             "title   title    title"
             "header  header   header"
             ".       preview  analysis"
-            "options options  options"
-            "footer  footer   footer";
+            "options options  options";
         grid-template-columns: 0 1fr var(--analysis-panel-width);
-        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto auto;
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
         height: 100dvh;
         overflow: hidden;
     }
@@ -153,10 +136,9 @@ button {
         grid-template-areas:
             "title   title"
             "header  header"
-            "preview analysis"
-            "footer  footer";
+            "preview analysis";
         grid-template-columns: 1fr var(--analysis-panel-width);
-        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr auto;
+        grid-template-rows: var(--title-bar-height) var(--top-bar-height) 1fr;
         height: 100dvh;
         overflow: hidden;
     }
@@ -172,9 +154,6 @@ button {
     }
     #analysis-panel {
         grid-area: analysis;
-    }
-    #footer-area {
-        grid-area: footer;
     }
 
     /* dock-bottom: 옵션 패널 그리드 배치 */
@@ -200,12 +179,6 @@ button {
     .app.dock-side #options-panel.sidebar-open {
         transform: translateX(0);
     }
-
-    #setup-panel,
-    #bms-panel,
-    #mobile-tab-bar {
-        display: none !important;
-    }
 }
 
 /* ====================
@@ -217,9 +190,10 @@ button {
         display: flex;
         flex-direction: column;
         min-height: 100dvh;
-        padding-bottom: var(--mobile-tab-bar-height);
     }
 
+    /* 상단 존(#preview-area): [프리뷰][분석] 세그먼트 탭 + 캔버스/컨트롤 또는 분석 패널.
+       sticky로 화면 상단에 고정, 그 아래 옵션 패널이 나머지를 채운다. */
     #preview-area {
         position: sticky;
         top: 0;
@@ -234,26 +208,26 @@ button {
         background: var(--color-bg-body);
     }
 
-    /* 탭 패널 기본: 숨김 */
-    .tab-panel {
+    /* 상단 세그먼트 탭: 모바일에서만 표시.
+       base의 .preview-seg-tabs{display:none}가 소스상 이 미디어쿼리보다 "뒤"에 있어,
+       같은 명시도면 base가 이긴다 → #preview-area를 붙여 명시도(1,1,0)>base(0,1,0)로 재정의. */
+    #preview-area .preview-seg-tabs {
+        display: flex;
+        flex-shrink: 0;
+    }
+
+    /* 분석 모드: 캔버스/컨트롤을 숨기고, 상단 존으로 이동해 온 분석 패널을 표시 */
+    #preview-area.mode-analysis .playfield-wrapper,
+    #preview-area.mode-analysis .playback-controls {
         display: none;
     }
 
-    /*
-     * #options-panel / #analysis-panel 에는 전역 CSS에서 ID 선택자로 display: flex 가 설정됨.
-     * ID 선택자(1,0,0) > 클래스 선택자(0,1,0) 이므로 .tab-panel { display: none } 만으로는 숨겨지지 않음.
-     * :not(.tab-active) 를 붙여 specificity를 (1,1,0) 으로 높여 전역 스타일을 재정의.
-     */
-    #options-panel:not(.tab-active),
-    #analysis-panel:not(.tab-active) {
+    /* 분석 패널은 모바일에서 #preview-area 내부로 이동(main.js). 프리뷰 모드에선 숨김.
+       (#preview-area #analysis-panel 의 명시도 2,0,0 > 전역 #analysis-panel 1,0,0) */
+    #preview-area #analysis-panel {
         display: none;
-        border: none;
     }
-
-    /* 활성 탭 패널: ID 선택자 + 클래스로 specificity (1,1,0) 확보 */
-    #options-panel.tab-active,
-    #analysis-panel.tab-active,
-    #bms-panel.tab-active {
+    #preview-area.mode-analysis #analysis-panel {
         display: flex;
         flex-direction: column;
         flex: 1;
@@ -261,26 +235,11 @@ button {
         border: none;
     }
 
-    /* BMS 탭: 토글 버튼 숨기고 본문 항상 펼침 */
-    #mobile-bms .bms-toggle {
-        display: none;
-    }
-
-    #mobile-bms .bms-body,
-    #mobile-bms .bms-body.collapsed {
-        display: flex;
-        max-height: none;
-        padding: 12px;
-    }
-
-    #mobile-bms .bms-textarea {
+    /* 옵션 패널: 항상 표시(상시), 상단 존 아래 나머지 영역을 채우고 스크롤 */
+    #options-panel {
         flex: 1;
-        resize: none;
-        min-height: 120px;
-    }
-
-    #footer-area {
-        display: none;
+        overflow-y: auto;
+        border: none;
     }
 
     /* 모바일: 셋업 탭 제거로 TopBar에서 게임 선택 드롭다운을 표시 */
@@ -290,15 +249,6 @@ button {
 
     .top-bar-game-name {
         display: none;
-    }
-
-    #mobile-tab-bar {
-        display: flex;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 100;
     }
 }
 
@@ -508,7 +458,9 @@ button {
 .options-panel-inner.layout-rows {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    /* 옵션 사이 간격은 같은 옵션 내 칩 줄 간격(아래 row-gap 3px)보다 넓게 둬서,
+       칩이 두 줄로 감겨도 옆 옵션과 명확히 구분되어 "침범"처럼 보이지 않게 한다. */
+    gap: 6px;
     padding: 10px 12px;
     overflow-y: auto;
 }
@@ -518,6 +470,10 @@ button {
     align-items: center;
     gap: 10px;
     min-height: 36px;
+    /* 세로 flex 컨테이너에서 옵션이 패널 높이를 넘으면 자식이 min-height까지 찌그러져
+       두 줄 칩이 박스를 넘쳐 위아래를 침범한다. flex-shrink:0으로 각 셀이 내용만큼의
+       높이를 유지하게 하고, 넘치는 분은 패널의 overflow-y로 스크롤한다. */
+    flex-shrink: 0;
 }
 
 .options-panel-inner.layout-rows .option-label {
@@ -573,6 +529,11 @@ button {
     gap: 5px;
 }
 
+/* rows: 칩이 두 줄로 감길 때 줄 사이(row-gap)는 좁게, 칩 사이(column-gap)는 5px 유지 */
+.options-panel-inner.layout-rows .chip-list {
+    row-gap: 3px;
+}
+
 .options-panel-inner.layout-cols .chip-list {
     flex-direction: column;
     flex-wrap: nowrap;
@@ -580,17 +541,65 @@ button {
 }
 
 .chip {
-    padding: 4px 12px;
+    padding: 4px 10px;
     border-radius: 99px;
     border: 1px solid var(--color-chip-border);
     background: var(--color-chip-bg);
     color: var(--color-text-main);
-    font-size: 0.82rem;
-    white-space: nowrap;
+    font-size: 0.8rem;
+    /* 긴 칩 라벨(예: "프레이즈/클리어미터 OFF")은 좁은 패널에서 한 줄을 넘으므로
+       줄바꿈을 허용해 칩 안에서 감기게 한다 — 좁은 폭을 넘어 삐져나오지 않음 (방식 3). */
+    white-space: normal;
+    overflow-wrap: anywhere;
     transition:
         background 0.12s,
         border-color 0.12s;
     line-height: 1.4;
+}
+
+/* 프리셋(버튼형) 옵션: 토글 칩(둥근 모서리)과 구분되도록 각진 버튼 모양 */
+.chip.preset-chip {
+    border-radius: 6px;
+}
+
+/* 비활성 칩 (현재 프리셋 버튼은 실측값 확보 전까지 disabled) */
+.chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ====================
+   옵션 설명 툴팁
+   ==================== */
+
+/* body 직속으로 붙는 단일 툴팁 요소 (JS가 위치·표시 제어) */
+.option-tooltip {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    max-width: 240px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--color-modal-bg);
+    border: 1px solid var(--color-modal-border);
+    color: var(--color-text-main);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    /* pre-line: 일반 공백은 합치되 description의 개행(\n)은 줄바꿈으로 렌더 */
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    /* 툴팁이 클릭을 가로채면 바깥 클릭 닫기·컨트롤 조작을 방해하므로 통과시킴 */
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s;
+}
+
+.option-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
 }
 
 .chip:hover {
@@ -767,6 +776,28 @@ button {
     cursor: default;
 }
 
+/* 상단 세그먼트 탭 (프리뷰/분석) — 모바일 전용. 데스크톱/태블릿에선 숨김. */
+.preview-seg-tabs {
+    display: none;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-panel);
+}
+
+.seg-tab {
+    flex: 1;
+    padding: 8px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--color-tab-inactive);
+    font-size: 0.85rem;
+}
+
+.seg-tab.active {
+    color: var(--color-tab-active);
+    border-bottom-color: var(--color-tab-active);
+}
+
 /* 캔버스 렌더러 (*Preview.mjs) */
 
 .gf-canvas {
@@ -851,171 +882,6 @@ button {
         padding: 12px;
         align-content: start;
     }
-}
-
-/* ====================
-   Footer (BMS Input 토글)
-   ==================== */
-
-.footer-area {
-    background: var(--color-bg-footer);
-    border-top: 1px solid var(--color-border);
-    flex-shrink: 0;
-}
-
-.bms-input-section {
-    width: 100%;
-}
-
-.bms-toggle {
-    width: 100%;
-    padding: 8px 14px;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-size: 0.82rem;
-    text-align: left;
-    border-bottom: 1px solid transparent;
-    transition: color 0.12s;
-}
-
-.bms-toggle:hover {
-    color: var(--color-text-main);
-}
-
-.bms-toggle.open {
-    border-bottom-color: var(--color-border);
-    color: var(--color-text-main);
-}
-
-.bms-body {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 10px 12px;
-    max-height: 180px;
-    overflow: hidden;
-    transition: max-height 0.2s ease;
-}
-
-.bms-body.collapsed {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-}
-
-.bms-textarea {
-    width: 100%;
-    background: #1a1a1a;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    color: var(--color-text-main);
-    font-family: monospace;
-    font-size: 0.82rem;
-    padding: 8px;
-    resize: vertical;
-    min-height: 80px;
-}
-
-.bms-textarea:focus {
-    outline: 2px solid var(--color-chip-selected);
-    outline-offset: 1px;
-}
-
-.bms-apply-btn {
-    align-self: flex-end;
-    padding: 6px 16px;
-    border-radius: 6px;
-    border: 1px solid var(--color-chip-selected);
-    background: var(--color-chip-selected);
-    color: #fff;
-    font-size: 0.85rem;
-}
-
-.bms-apply-btn:hover {
-    background: #4d8ff0;
-}
-
-/* ====================
-   Mobile Setup Panel
-   ==================== */
-
-.setup-section {
-    padding: 12px;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.setup-section:last-child {
-    border-bottom: none;
-}
-
-.setup-label {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-}
-
-.setup-monitor-btn {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--color-border);
-    background: #2a2a2a;
-    color: var(--color-text-main);
-    text-align: left;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.setup-monitor-btn:hover {
-    background: #333;
-}
-
-.setup-monitor-btn .gear-icon {
-    color: var(--color-text-muted);
-}
-
-/* ====================
-   Mobile Tab Bar
-   ==================== */
-
-.mobile-tab-bar {
-    background: var(--color-tab-bar-bg);
-    border-top: 1px solid var(--color-border);
-    height: var(--mobile-tab-bar-height);
-    align-items: stretch;
-}
-
-.tab-btn {
-    flex: 1;
-    background: none;
-    border: none;
-    color: var(--color-tab-inactive);
-    font-size: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 4px 0;
-    transition: color 0.12s;
-}
-
-.tab-btn.active {
-    color: var(--color-tab-active);
-}
-
-.tab-btn-icon {
-    font-size: 1.1rem;
-    line-height: 1;
-}
-
-.tab-btn-label {
-    font-size: 0.68rem;
 }
 
 /* ====================

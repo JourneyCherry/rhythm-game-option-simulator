@@ -19,7 +19,8 @@
                 {
                     "type": "number",
                     "id": "speed",
-                    "label": "배속",
+                    "label": "SPEED",
+                    "description": "노트 낙하 속도.",
                     "min": 0.5,
                     "max": 20,
                     "step": 0.5,
@@ -32,17 +33,279 @@
                 {
                     "type": "select",
                     "id": "direction",
-                    "label": "방향",
+                    "label": "REVERSE",
+                    "description": "노트 낙하 방향 반전.",
                     "options": [
-                        { "value": -1, "label": "Normal" },
-                        { "value": 1, "label": "Reverse" }
+                        { "value": -1, "label": "OFF" },
+                        { "value": 1, "label": "ON" }
                     ],
                     "defaultValue": -1
                 },
                 {
+                    "type": "select",
+                    "id": "left",
+                    "label": "LEFT",
+                    "description": "노트 위치 좌우 반전.\n왼손잡이용 기타로 잡을 것을 전제로 한 옵션.",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "on", "label": "ON" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "auto",
+                    "label": "AUTO",
+                    "description": "부분 자동 플레이.\nPICK : 픽 입력만 자동 플레이\nNECK : 넥 입력만 자동 플레이",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "pick", "label": "PICK" },
+                        { "value": "neck", "label": "NECK" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "buttonCount",
+                    "label": "버튼 수",
+                    "description": "플레이 버튼 수 조정.\nOFF : 기존의 5버튼 플레이\n4, 3, 2 : P, Y, B 순서로 버튼 잠금",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "4", "label": "4" },
+                        { "value": "3", "label": "3" },
+                        { "value": "2", "label": "2" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "playMode",
+                    "label": "연주 모드",
+                    "description": "NORMAL : 키음 없음\nSPECIALIST : 키음 있음",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "specialist", "label": "SPECIALIST" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "preset",
+                    "id": "lineDisplayPreset",
+                    "label": "라인 표시 프리셋",
+                    "description": "V 시리즈 다크 옵션처럼 설정해주는 옵션.\nDARK HALF : 작성중\nDARK FULL : 작성중",
+                    "options": [
+                        { "value": "none", "label": "- -" },
+                        {
+                            "value": "default",
+                            "label": "초기설정",
+                            "applies": {
+                                "lineDisplay": "on",
+                                "lineOpacity": 100
+                            }
+                        },
+                        {
+                            "value": "darkHalf",
+                            "label": "DARK HALF",
+                            "applies": {
+                                "lineDisplay": "on",
+                                "lineOpacity": 50
+                            }
+                        },
+                        {
+                            "value": "darkFull",
+                            "label": "DARK FULL",
+                            "applies": { "lineDisplay": "on", "lineOpacity": 0 }
+                        }
+                    ],
+                    "defaultValue": "none"
+                },
+                {
+                    "type": "select",
+                    "id": "lineDisplay",
+                    "label": "라인 표시",
+                    "description": "키빔 및 박자선 표시 설정\n레인 OFF : 키빔 미표시\n소절선 OFF : 박자선 미표시\nALL OFF : 키빔 및 박자선 미표시",
+                    "options": [
+                        { "value": "on", "label": "ON" },
+                        { "value": "laneOff", "label": "레인 OFF" },
+                        { "value": "barOff", "label": "소절선 OFF" },
+                        { "value": "allOff", "label": "ALL OFF" }
+                    ],
+                    "defaultValue": "on"
+                },
+                {
+                    "type": "number",
+                    "id": "lineOpacity",
+                    "label": "라인 투명도",
+                    "description": "레인 투명도 설정.",
+                    "min": 0,
+                    "max": 100,
+                    "step": 10,
+                    "defaultValue": 100
+                },
+                {
+                    "type": "select",
+                    "id": "judgelineDisplay",
+                    "label": "판정라인 표시",
+                    "description": "판정선 표시 옵션.",
+                    "options": [
+                        { "value": "on", "label": "ON" },
+                        { "value": "off", "label": "OFF" }
+                    ],
+                    "defaultValue": "on"
+                },
+                {
+                    "type": "select",
+                    "id": "wailingEffect",
+                    "label": "웨일링 이펙트 표시",
+                    "description": "웨일링 시, 이펙트 표시 설정.\n레인 OFF : 웨일링 레인 폭발 이펙트 미표시\n배경 OFF : 플레이 레인 주변 폭발 이펙트 미표시\nALL OFF : 웨일링 이펙트 전체 미표시",
+                    "options": [
+                        { "value": "on", "label": "ON" },
+                        { "value": "laneOff", "label": "레인 OFF" },
+                        { "value": "bgOff", "label": "배경 OFF" },
+                        { "value": "allOff", "label": "ALL OFF" }
+                    ],
+                    "defaultValue": "on"
+                },
+                {
+                    "type": "select",
+                    "id": "attackEffectDesign",
+                    "label": "어택 이펙트 디자인 변경",
+                    "description": "폭발 이펙트 디자인 변경.\n각 디자인은 미구현",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "off", "label": "OFF" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "judgeEffectDesign",
+                    "label": "판정 이펙트 디자인 변경",
+                    "description": "판정 이펙트 디자인 변경.\n각 디자인은 미구현",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "off", "label": "OFF" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "comboDesign",
+                    "label": "콤보 표시 디자인 변경",
+                    "description": "콤보 디자인 변경.\n각 디자인은 미구현",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "off", "label": "OFF" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "noteDesign",
+                    "label": "노트 디자인 변경",
+                    "description": "노트 디자인 변경.\n각 디자인은 미구현",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "off", "label": "OFF" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "shutterDesign",
+                    "label": "셔터 디자인 변경",
+                    "description": "셔터(IN, OUT) 디자인 변경.\n각 디자인은 미구현\nDARK : 검은색 셔터 디자인",
+                    "options": [
+                        { "value": "normal", "label": "NORMAL" },
+                        { "value": "dark", "label": "DARK" }
+                    ],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "progressGaugeDesign",
+                    "label": "프로그레스 게이지 디자인 변경",
+                    "description": "프레이즈 콤보 진행도 게이지(배경) 디자인 변경.\n각 디자인은 미구현",
+                    "options": [{ "value": "normal", "label": "NORMAL" }],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "characterDesign",
+                    "label": "캐릭터 연출 디자인 변경",
+                    "description": "프레이즈 콤보 성공 이펙트 디자인 변경.\n각 디자인은 미구현",
+                    "options": [{ "value": "normal", "label": "NORMAL" }],
+                    "defaultValue": "normal"
+                },
+                {
+                    "type": "select",
+                    "id": "movieDisplay",
+                    "label": "무비 표시",
+                    "description": "BGA 표시 설정.\nOFF : BGA 미표시\nTYPE A : 작성중\nTYPE B : 작성중\nTYPE C : 작성중",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "typeA", "label": "TYPE A" },
+                        { "value": "typeB", "label": "TYPE B" },
+                        { "value": "typeC", "label": "TYPE C" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "frameDisplay",
+                    "label": "프레임 표시",
+                    "description": "플레이 프레임 표시 설정. 플레이 레인은 영향받지 않음.\nON : 전체 프레임 표시\n프레이즈/클리어미터 OFF : 좌우 프레임 미표시\nALL OFF : 상하좌우 전체 프레임 미표시",
+                    "options": [
+                        { "value": "on", "label": "ON" },
+                        {
+                            "value": "phraseClearOff",
+                            "label": "프레이즈/클리어미터 OFF"
+                        },
+                        { "value": "allOff", "label": "ALL OFF" }
+                    ],
+                    "defaultValue": "on"
+                },
+                {
+                    "type": "select",
+                    "id": "detailInfo",
+                    "label": "상세정보 표시",
+                    "description": "플레이 정보 표시 옵션.\n플레이 중, Option 버튼으로 끄고 켤 수 있음",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "on", "label": "ON" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "judgeEffectPosition",
+                    "label": "판정 이펙트 위치",
+                    "description": "판정 이펙트 위치 설정.\nTYPE A : 작성중\nTYPE B : 작성중\nTYPE C : 작성중",
+                    "options": [
+                        { "value": "typeA", "label": "TYPE A" },
+                        { "value": "typeB", "label": "TYPE B" },
+                        { "value": "typeC", "label": "TYPE C" }
+                    ],
+                    "defaultValue": "typeA"
+                },
+                {
+                    "type": "select",
+                    "id": "judgeTimingDisplay",
+                    "label": "판정 타이밍 표시",
+                    "description": "판정 타이밍 표시 위치 설정.\nOFF : 판정 타이밍 미표시\nTYPE A : 작성중\nTYPE B : 작성중\nTYPE C : 작성중",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "typeA", "label": "TYPE A" },
+                        { "value": "typeB", "label": "TYPE B" },
+                        { "value": "typeC", "label": "TYPE C" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
                     "type": "number",
                     "id": "judgelinePosition",
-                    "label": "판정선",
+                    "label": "판정라인 위치",
+                    "description": "판정선 위치 조정.\n노트가 판정선으로 오는 방향으로 이동",
                     "min": 0,
                     "max": 100,
                     "step": 1,
@@ -51,7 +314,8 @@
                 {
                     "type": "number",
                     "id": "sudden",
-                    "label": "서든",
+                    "label": "셔터(IN)",
+                    "description": "서든 설정. 노트가 내려오는 방향을 가림",
                     "min": 0,
                     "max": 100,
                     "step": 1,
@@ -60,16 +324,73 @@
                 {
                     "type": "number",
                     "id": "hidden",
-                    "label": "히든",
+                    "label": "셔터(OUT)",
+                    "description": "히든 설정. 판정선 근처를 가림",
                     "min": 0,
                     "max": 100,
                     "step": 1,
                     "defaultValue": 0
                 },
                 {
+                    "type": "select",
+                    "id": "random",
+                    "label": "랜덤",
+                    "description": "노트 랜덤. 모든 랜덤 옵션은 코드가 2칸 이상 떨어지지 않도록 배치하여 무리배치를 배제하며, 배치가 불가능한 경우, 해당 마디는 정배치로 내려온다.\nOFF : 정배치\nRANDOM : 노트를 레인별로 섞음\nSUPER RANDOM : 모든 노트를 섞음",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "random", "label": "RANDOM" },
+                        { "value": "superRandom", "label": "SUPER RANDOM" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "risky",
+                    "label": "RISKY",
+                    "description": "게이지 옵션.\nOFF : 게이지를 모두 잃어도 플레이를 중단하지 않음. 단, 게이지를 모두 잃은 시점에서 점수 기록은 중단됨\n5, 1 : MISS가 그 이상 발생하면 즉시 플레이 중단",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "5", "label": "5" },
+                        { "value": "1", "label": "1" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "select",
+                    "id": "skillMeter",
+                    "label": "SKILLMETER",
+                    "description": "스킬 미터 표시.\nOFF : 스킬 미터 미표시\nLOCAL : 스킬 미터 표시. 자기 기록 최대가 같이 표시됨",
+                    "options": [
+                        { "value": "off", "label": "OFF" },
+                        { "value": "local", "label": "LOCAL" }
+                    ],
+                    "defaultValue": "off"
+                },
+                {
+                    "type": "preset",
+                    "id": "judgeAdjustPreset",
+                    "label": "판정 조정 프리셋",
+                    "description": "판정 조정 프리셋. 구작 판정 옵션을 사용하려는 유저들을 위한 프리셋 설정.\nGITADORA : 작성중\nXG 시리즈 : 작성중",
+                    "options": [
+                        { "value": "none", "label": "- -" },
+                        {
+                            "value": "gitadora",
+                            "label": "GITADORA",
+                            "applies": { "judgeOffset": 0, "noteOffset": 0 }
+                        },
+                        {
+                            "value": "xg",
+                            "label": "XG 시리즈",
+                            "applies": { "judgeOffset": 0, "noteOffset": 0 }
+                        }
+                    ],
+                    "defaultValue": "none"
+                },
+                {
                     "type": "number",
-                    "id": "noteOffset",
-                    "label": "노트 타이밍",
+                    "id": "judgeOffset",
+                    "label": "판정 타이밍 조절",
+                    "description": "내부 판정선을 움직이는 옵션. 키음 싱크도 같이 움직인다.\n- : 키음이 배경음보다 빠른 경우(또는 SLOW가 많을 경우)\n+ : 키음이 배경음보다 느린 경우(또는 FAST가 많을 경우)",
                     "min": -20,
                     "max": 20,
                     "step": 1,
@@ -77,12 +398,24 @@
                 },
                 {
                     "type": "number",
-                    "id": "judgeOffset",
-                    "label": "판정 타이밍",
+                    "id": "noteOffset",
+                    "label": "노트 표시 조절",
+                    "description": "내부 판정선을 움직이는 옵션. 키음 싱크는 유지하며, \"판정 타이밍 조절\" 옵션과 반대로 움직인다.\n- : FAST가 많을 경우\n+ : SLOW가 많을 경우",
                     "min": -20,
                     "max": 20,
                     "step": 1,
                     "defaultValue": 0
+                },
+                {
+                    "type": "select",
+                    "id": "soundTiming",
+                    "label": "연주음 타이밍 설정",
+                    "description": "키음을 피킹 시점으로부터 딜레이를 줄지 여부 옵션. 구작(넘버링 버전) 유저를 위한 옵션.\n리얼타임 : 키음을 키입력과 동시에 출력\n딜레이 : 키음을 키입력 시점에서 약간 뒤에 출력",
+                    "options": [
+                        { "value": "realtime", "label": "리얼타임" },
+                        { "value": "delay", "label": "딜레이" }
+                    ],
+                    "defaultValue": "realtime"
                 }
             ]
         },
