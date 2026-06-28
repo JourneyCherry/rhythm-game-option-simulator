@@ -1,7 +1,10 @@
+import * as RangeControl from "./RangeControl.mjs";
+
 let _container = null;
 let _layout = "rows";
 let _onChange = null;
 let _onApplyPreset = null;
+let _onReset = null;
 
 /**
  * 옵션 패널을 초기화합니다.
@@ -12,12 +15,14 @@ let _onApplyPreset = null;
  * @param {object} opts.values - 현재 옵션 값 맵
  * @param {function} opts.onChange - 값 변경 콜백 (id, value) => void
  * @param {function} [opts.onApplyPreset] - 프리셋(버튼형) 적용 콜백 (id, value, applies) => void
+ * @param {function} [opts.onReset] - 옵션 초기화 버튼 콜백 () => void
  */
-export function init(container, { layout, options, values, onChange, onApplyPreset }) {
+export function init(container, { layout, options, values, onChange, onApplyPreset, onReset }) {
     _container = container;
     _layout = layout;
     _onChange = onChange;
     _onApplyPreset = onApplyPreset;
+    _onReset = onReset;
 
     render(options, values);
 }
@@ -40,12 +45,27 @@ export function render(options, values) {
     inner.className = `options-panel-inner layout-${_layout}`;
 
     options.forEach((def) => {
-        const item = createOptionItem(def, values[def.id] ?? def.defaultValue);
+        const item = createOptionItem(def, values[def.id] ?? def.defaultValue, values);
         inner.appendChild(item);
     });
 
     _container.appendChild(inner);
     inner.scrollTop = prevScroll; // 새로 만든 스크롤 컨테이너에 이전 위치 복원
+
+    // 옵션 초기화 버튼 — 스크롤되는 inner 바깥(패널 하단)에 상시 고정.
+    if (_onReset) {
+        const footer = document.createElement("div");
+        footer.className = "options-panel-footer";
+
+        const resetBtn = document.createElement("button");
+        resetBtn.type = "button";
+        resetBtn.className = "options-reset-btn";
+        resetBtn.textContent = "옵션 초기화";
+        resetBtn.addEventListener("click", () => _onReset?.());
+
+        footer.appendChild(resetBtn);
+        _container.appendChild(footer);
+    }
 }
 
 /** layout prop을 변경하고 재렌더링합니다. (추후 folder 지원 시 이 함수 확장) */
@@ -54,7 +74,7 @@ export function setLayout(layout, options, values) {
     render(options, values);
 }
 
-function createOptionItem(def, currentValue) {
+function createOptionItem(def, currentValue, values) {
     const item = document.createElement("div");
     item.className = "option-item";
 
@@ -66,10 +86,21 @@ function createOptionItem(def, currentValue) {
     const controlArea = document.createElement("div");
     controlArea.className = "option-control-area";
 
+    // invertButtonsWhenDirection: 현재 direction 값이 이 값과 같으면 +/− 버튼·슬라이더 방향을
+    // 뒤집는다(커버 경계가 움직이는 화면 방향과 +방향을 맞춤). 동작(값)은 동일.
+    // 서든·히든은 같은 방향에서 경계가 서로 반대로 움직이므로 트리거 방향값도 서로 반대(1 vs -1).
+    // RangeControl에는 위/아래 방향을 plusDirection 한 값으로 넘긴다.
+    const invertButtons =
+        def.invertButtonsWhenDirection != null &&
+        Number(values?.direction) === def.invertButtonsWhenDirection;
+    const plusDirection = invertButtons ? "down" : "up";
+
     // 타입별 렌더러 (추후 toggle/numeric 추가 가능)
     switch (def.type) {
         case "number":
-            controlArea.appendChild(createRangeControl(def, currentValue));
+            controlArea.appendChild(
+                RangeControl.create(def, currentValue, { plusDirection, onChange: _onChange }),
+            );
             break;
         case "select":
             controlArea.appendChild(createSelectControl(def, currentValue));
@@ -78,93 +109,13 @@ function createOptionItem(def, currentValue) {
             controlArea.appendChild(createPresetControl(def));
             break;
         default:
-            controlArea.appendChild(createRangeControl(def, currentValue));
+            controlArea.appendChild(
+                RangeControl.create(def, currentValue, { onChange: _onChange }),
+            );
     }
 
     item.append(label, controlArea);
     return item;
-}
-
-// ---- RangeControl ----
-function createRangeControl(def, currentValue) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "range-control";
-
-    const row = document.createElement("div");
-    row.className = "range-row";
-
-    const decBtn = document.createElement("button");
-    decBtn.type = "button";
-    decBtn.className = "range-btn dec-btn";
-    decBtn.textContent = "−";
-    decBtn.setAttribute("aria-label", `${def.label} 감소`);
-
-    const slider = document.createElement("input");
-    slider.type = "range";
-    slider.className = "option-slider";
-    slider.min = def.min;
-    slider.max = def.max;
-    slider.step = def.step;
-    slider.value = currentValue;
-
-    const incBtn = document.createElement("button");
-    incBtn.type = "button";
-    incBtn.className = "range-btn inc-btn";
-    incBtn.textContent = "+";
-    incBtn.setAttribute("aria-label", `${def.label} 증가`);
-
-    const valueDisplay = document.createElement("span");
-    valueDisplay.className = "range-value";
-    valueDisplay.textContent = formatValue(currentValue, def.step);
-
-    // steps 배열이 있으면 슬라이더를 인덱스 기반으로 동작
-    const steps = def.steps ?? null;
-    if (steps) {
-        slider.min = 0;
-        slider.max = steps.length - 1;
-        slider.step = 1;
-        const initIdx = steps.indexOf(parseFloat(slider.value));
-        slider.value = initIdx >= 0 ? initIdx : 0;
-    }
-
-    function applyValue(raw) {
-        if (steps) {
-            let idx = parseInt(raw, 10);
-            if (Number.isNaN(idx)) return;
-            idx = Math.max(0, Math.min(steps.length - 1, idx));
-            slider.value = idx;
-            const v = steps[idx];
-            valueDisplay.textContent = formatValue(v, def.step);
-            _onChange?.(def.id, v);
-        } else {
-            let v = parseFloat(raw);
-            if (Number.isNaN(v)) return;
-            v = Math.min(def.max, Math.max(def.min, v));
-            // step 단위로 반올림 (부동소수점 오차 방지)
-            const decimals = (String(def.step).split(".")[1] ?? "").length;
-            v = parseFloat(v.toFixed(decimals));
-            slider.value = v;
-            valueDisplay.textContent = formatValue(v, def.step);
-            _onChange?.(def.id, v);
-        }
-    }
-
-    function stepIndex(dir) {
-        return String(parseInt(slider.value, 10) + dir);
-    }
-
-    slider.addEventListener("input", () => applyValue(slider.value));
-    decBtn.addEventListener("click", () =>
-        steps ? applyValue(stepIndex(-1)) : applyValue(parseFloat(slider.value) - def.step),
-    );
-    incBtn.addEventListener("click", () =>
-        steps ? applyValue(stepIndex(1)) : applyValue(parseFloat(slider.value) + def.step),
-    );
-
-    // rows: − 왼쪽, + 오른쪽. cols: CSS order 속성으로 + 위/− 아래로 재정렬
-    row.append(decBtn, slider, incBtn, valueDisplay);
-    wrapper.appendChild(row);
-    return wrapper;
 }
 
 // ---- SelectControl ----
@@ -224,11 +175,6 @@ function createPresetControl(def) {
     });
 
     return chipList;
-}
-
-function formatValue(v, step) {
-    const decimals = (String(step).split(".")[1] ?? "").length;
-    return v.toFixed(decimals);
 }
 
 // ====================

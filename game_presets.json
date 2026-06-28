@@ -145,7 +145,8 @@
                     "min": 0,
                     "max": 100,
                     "step": 1,
-                    "defaultValue": 0
+                    "defaultValue": 0,
+                    "invertButtonsWhenDirection": 1
                 },
                 {
                     "type": "number",
@@ -154,7 +155,8 @@
                     "min": 0,
                     "max": 100,
                     "step": 1,
-                    "defaultValue": 0
+                    "defaultValue": 0,
+                    "invertButtonsWhenDirection": -1
                 },
                 {
                     "type": "number",

@@ -1,7 +1,7 @@
 // 모니터 설정 모달.
-// 화면 크기(인치)와 해상도만 입력받는다. 화면비는 항상 16:9로 고정이며,
-// 입력 지연·빠른 선택·수동 화면비 입력은 제공하지 않는다.
-// "초기화" 버튼은 현재 게임의 기본 모니터로 되돌린다(main.js의 onReset).
+// 화면 크기(인치)만 입력·저장한다. 해상도와 화면비는 표시 전용(수정·저장 불가):
+// 해상도는 게임 기본 모니터값, 화면비는 항상 16:9 고정.
+// "초기화" 버튼은 저장한 크기를 지우고 현재 게임 기본 모니터로 되돌린다(main.js의 onReset).
 
 let _overlay = null;
 let _closeBtn = null;
@@ -9,10 +9,9 @@ let _isRequired = false;
 let _onSave = null;
 let _onReset = null;
 
-// 폼 입력 요소 참조
+// 폼 요소 참조
 let _sizeInput = null;
-let _widthInput = null;
-let _heightInput = null;
+let _resDisplay = null; // 해상도 표시 전용 요소
 
 // 화면비는 항상 16:9로 고정.
 const FIXED_ASPECT = "16:9";
@@ -76,16 +75,11 @@ export function init(container, { onSave, onReset, monitor }) {
     sizeRow.append(_sizeInput, makeSep('"'));
     sizeGroup.appendChild(sizeRow);
 
-    // 해상도
+    // 해상도 (게임 기본값, 표시 전용 — 수정·저장 안 함)
     const resGroup = makeFieldGroup("해상도");
-    _widthInput = makeInput("number", "1920", "narrow");
-    _widthInput.min = 1;
-    _heightInput = makeInput("number", "1080", "narrow");
-    _heightInput.min = 1;
-    const resRow = document.createElement("div");
-    resRow.className = "field-row";
-    resRow.append(_widthInput, makeSep("×"), _heightInput);
-    resGroup.appendChild(resRow);
+    _resDisplay = document.createElement("span");
+    _resDisplay.className = "res-display";
+    resGroup.appendChild(_resDisplay);
 
     // 화면비 (항상 16:9 고정, 읽기 전용 표시)
     const aspectGroup = makeFieldGroup("화면비");
@@ -144,19 +138,17 @@ function updateCloseButtonState() {
 }
 
 function handleSave() {
-    const data = {
-        sizeInches: parseFloatOrNull(_sizeInput.value),
-        widthPx: parseIntOrNull(_widthInput.value),
-        heightPx: parseIntOrNull(_heightInput.value),
-    };
-    _onSave?.(data);
+    // 크기(인치)만 저장한다. 해상도·화면비는 표시 전용이라 저장 데이터에 넣지 않는다.
+    _onSave?.({ sizeInches: parseFloatOrNull(_sizeInput.value) });
     close();
 }
 
 function fillForm(data) {
     if (_sizeInput) _sizeInput.value = data.sizeInches ?? "";
-    if (_widthInput) _widthInput.value = data.widthPx ?? "";
-    if (_heightInput) _heightInput.value = data.heightPx ?? "";
+    if (_resDisplay) {
+        _resDisplay.textContent =
+            data.widthPx && data.heightPx ? `${data.widthPx} × ${data.heightPx}` : "—";
+    }
 }
 
 function makeFieldGroup(labelText) {
@@ -186,10 +178,5 @@ function makeSep(text) {
 
 function parseFloatOrNull(v) {
     const n = parseFloat(v);
-    return Number.isNaN(n) ? null : n;
-}
-
-function parseIntOrNull(v) {
-    const n = parseInt(v, 10);
     return Number.isNaN(n) ? null : n;
 }

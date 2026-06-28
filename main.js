@@ -12,16 +12,14 @@ import * as MonitorModal from "./views/MonitorSettingsModal.mjs";
 import * as MobilePreviewTabs from "./views/MobilePreviewTabs.mjs";
 
 async function init() {
-    Monitor.init();
-
     const { defaultPresetId, presetMap } = await loadPresets();
     let currentPreset = presetMap[defaultPresetId];
 
-    // 모니터 설정은 게임에 종속 — 기본 게임의 기본 모니터로 덮어쓴다.
-    // (개인 모니터 영속화는 추후 쿠키 등으로 별도 처리 예정)
-    if (currentPreset.defaultMonitor) Monitor.save(currentPreset.defaultMonitor);
-
+    // initConfig가 게임 옵션과 함께 모니터 크기(config.monitorSizeInches)도 쿠키에서 복원한다.
     const config = OptionService.initConfig(currentPreset);
+
+    // 모니터값 구성: 해상도는 게임 defaultMonitor, 크기는 게임별 옵션 쿠키 값(config).
+    syncMonitor(currentPreset);
 
     const app = document.getElementById("app");
     setDockClass(app, currentPreset.optionsDock);
@@ -66,6 +64,10 @@ async function init() {
         values: config,
         onChange: (id, value) => {
             OptionService.applyOptionChange(id, value);
+            // 방향 변경 시 invertButtonsWhenDirection 옵션의 +/− 버튼·슬라이더 방향이 바뀌므로 패널 재렌더.
+            if (id === "direction") {
+                OptionsPanel.render(currentPreset.options, config);
+            }
             analysisPanel.update();
             // 일시정지 중에도 변경을 즉시 반영(재생 중에는 무해한 추가 1프레임).
             _activePreview?.redraw();
@@ -80,17 +82,31 @@ async function init() {
             analysisPanel.update();
             _activePreview?.redraw();
         },
+        // 옵션 초기화: 현재 게임의 옵션을 프리셋 기본값으로 되돌리고(쿠키에도 반영)
+        // 패널 재렌더·분석 갱신·한 프레임 강제 렌더로 즉시 반영한다.
+        onReset: () => {
+            OptionService.resetToDefaults(currentPreset);
+            OptionsPanel.render(currentPreset.options, config);
+            analysisPanel.update();
+            _activePreview?.redraw();
+        },
     });
 
     // ---- MonitorSettingsModal ----
     MonitorModal.init(document.getElementById("modal-root"), {
+        // 모달은 크기(인치)만 저장한다. 해상도·화면비는 표시 전용(수정·저장 안 함).
+        // 크기는 현재 게임의 옵션 쿠키에 함께 저장된다(OptionService.setMonitorSize).
         onSave: (data) => {
-            Monitor.save(data);
+            OptionService.setMonitorSize(data.sizeInches);
+            syncMonitor(currentPreset);
             TopBar.updateMonitorSummary(Monitor.getSummaryText());
             analysisPanel.update(); // 노트 속도는 모니터에 의존
         },
-        // 초기화: 현재 게임의 기본 모니터로 되돌리고(저장·요약·폼·분석 갱신) 모달은 열어 둔다.
-        onReset: () => applyGameMonitor(currentPreset),
+        // 초기화: 크기를 현재 게임 기본 모니터 크기로 되돌린다(요약·폼·분석 갱신). 모달은 열어 둠.
+        onReset: () => {
+            OptionService.setMonitorSize(currentPreset.defaultMonitor?.sizeInches ?? null);
+            applyGameMonitor(currentPreset);
+        },
         monitor: Monitor.getMonitor(),
     });
 
@@ -161,10 +177,19 @@ async function init() {
         TopBar.setSelectedPreset(presetId);
     }
 
-    // 선택된 게임의 기본 모니터로 모니터 설정을 덮어쓰고 관련 UI를 갱신한다.
+    // 현재 모니터값(Monitor)을 구성한다: 해상도는 게임 defaultMonitor, 크기는 게임별 옵션 쿠키 값(config).
+    function syncMonitor(preset) {
+        const dm = preset.defaultMonitor ?? {};
+        Monitor.set({
+            sizeInches: OptionService.getMonitorSize() ?? dm.sizeInches ?? null,
+            widthPx: dm.widthPx ?? null,
+            heightPx: dm.heightPx ?? null,
+        });
+    }
+
+    // 모니터값을 갱신하고 관련 UI(요약·모달 폼·분석)를 함께 갱신한다.
     function applyGameMonitor(preset) {
-        if (!preset.defaultMonitor) return;
-        Monitor.save(preset.defaultMonitor);
+        syncMonitor(preset);
         TopBar.updateMonitorSummary(Monitor.getSummaryText());
         MonitorModal.setMonitor(Monitor.getMonitor());
         analysisPanel.update(); // 노트 속도는 모니터에 의존
