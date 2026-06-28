@@ -1027,42 +1027,10 @@ button {
     flex-shrink: 0;
 }
 
-.modal-select {
-    padding: 7px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--color-border);
-    background: #2a2a2a;
-    color: var(--color-text-main);
-    font-size: 0.9rem;
-    width: 100%;
-    cursor: pointer;
-}
-
-.aspect-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .aspect-display {
     font-size: 0.9rem;
     color: var(--color-text-main);
     min-width: 60px;
-}
-
-.aspect-override-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-    cursor: pointer;
-}
-
-.modal-divider {
-    border: none;
-    border-top: 1px solid var(--color-border);
-    margin: 2px 0;
 }
 
 .btn-primary {

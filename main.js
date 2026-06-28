@@ -89,6 +89,8 @@ async function init() {
             TopBar.updateMonitorSummary(Monitor.getSummaryText());
             analysisPanel.update(); // 노트 속도는 모니터에 의존
         },
+        // 초기화: 현재 게임의 기본 모니터로 되돌리고(저장·요약·폼·분석 갱신) 모달은 열어 둔다.
+        onReset: () => applyGameMonitor(currentPreset),
         monitor: Monitor.getMonitor(),
     });
 

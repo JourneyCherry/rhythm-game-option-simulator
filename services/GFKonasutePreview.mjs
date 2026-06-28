@@ -89,123 +89,6 @@ const PROFILE = {
     hudHpBarColorPartial: "#3388ff", // 100% 미만
     hudHpRatio: 1, // 표시용 체력 비율(0~1). 옵션 무관 고정값(현재 만피).
 
-    // ── 좌측 스탯 패널 (판정 카운트·달성률·곡 SKILL). 레인 왼쪽, 옵션 무관 고정 구조.
-    //    프리뷰 연주 진행(songTime)에 따라 판정 카운트·콤보·달성률·스킬을 라이브 집계해 표시한다.
-    //    값은 임시 추정치 — 추후 실측/디자인 보정 예정. ──
-    statsPanelWidth: 384, // 패널 가로 너비.
-    statsPanelRightGap: 28, // 패널 우측 변과 레인 좌측 프레임 사이 가로 간격(레인과 띄움)
-    statsPanelTop: 360, // 패널 상단 Y (바닥 여백 = 천장 여백이 되도록 내린 위치)
-    statsPanelBottom: 976, // 패널 하단 Y
-    statsPanelPad: 16, // 패널 안쪽 여백
-    statsPanelBg: "rgba(0,0,0,0.55)", // 내부 반투명 검정 백패널
-    statsPanelBorderColor: "#ffffff",
-    statsPanelBorderWidth: 2,
-    statsZeroColor: "#666666", // 숫자 앞자리 0 (회색)
-    statsNumberColor: "#ffffff", // 실제 숫자 (흰색)
-    statsSuffixColor: "#aaaaaa", // 단위 기호 색
-
-    // 플레이어 이름/칭호 (최상단, 불투명 검정 백패널). 아케이드 이식용 placeholder.
-    statsPlayerName: "PlayerName",
-    statsPlayerTitle: "PlayerTitle",
-    statsNameBlockHeight: 56,
-    statsNameBg: "#000000", // 이름/칭호 뒤 불투명 검정
-    statsNamePadX: 12,
-    statsNameFontSize: 24,
-    statsNameColor: "#ffffff",
-    statsTitleFontSize: 15,
-    statsTitleColor: "#bbbbbb",
-
-    // 판정 카운트 행 (PERFECT/GREAT/GOOD/OK/MISS/MAX COMBO)
-    statsRowGapTop: 12, // 이름 블록과 첫 판정 행 사이 간격
-    statsRowHeight: 40,
-    statsRowGap: 4, // 행 사이 간격
-    statsLabelFontSize: 22, // 판정 이름
-    statsCountFontSize: 26, // 판정 개수 (4자리)
-    statsPercentFontSize: 18, // 비율 숫자 (3자리 %)
-    statsPercentColWidth: 88, // 비율 칼럼 폭(우측). 개수 우측 끝 위치 계산용
-    statsComboLabel: "MAX COMBO",
-    statsComboColor: "#ffffff",
-    statsJudgeLabels: {
-        perfect: "PERFECT",
-        great: "GREAT",
-        good: "GOOD",
-        ok: "OK",
-        miss: "MISS",
-    },
-    statsJudgeColors: {
-        perfect: "#ffd83f",
-        great: "#ff7fc4",
-        good: "#5fd06a",
-        ok: "#5fb0ff",
-        miss: "#9aa0aa",
-    },
-
-    // 구분선 / 섹션 간격
-    statsDividerColor: "#ffffff",
-    statsDividerWidth: 1,
-    statsSectionGap: 14,
-
-    // 보면 난이도 박스 (3등분: GUITAR / MASTER / 난이도 숫자. 가운뎃칸만 분홍 배경, 위·아래칸은 투명. 외곽 테두리는 유지)
-    statsDiffBoxWidth: 120,
-    statsDiffColor: "#ff3399", // 분홍 (가운뎃칸 MASTER 배경 + 박스 외곽 테두리)
-    statsDiffBorderWidth: 2, // 난이도 박스 외곽 테두리 두께
-    statsDiffBoxTopCellH: 24,
-    statsDiffBoxMidCellH: 28,
-    statsDiffBoxBotCellH: 48, // 난이도 숫자 칸 (다른 두 칸보다 넓다)
-    statsDiffTopText: "GUITAR",
-    statsDiffTopTextColor: "#ffffff",
-    statsDiffTopFontSize: 15,
-    statsDiffMidText: "MASTER",
-    statsDiffMidTextColor: "#000000",
-    statsDiffMidFontSize: 18,
-    statsDiffValueColor: "#ffffff",
-    statsDiffValueFontSize: 30,
-    statsDiffValueDecFontSize: 20,
-    statsChartDifficulty: 8.45, // 보면 난이도(레벨). TODO: 차트별 실제값
-
-    // 달성률 (난이도 박스 우측). 좌상단 작은 라벨 + 큰 숫자(정수 2자리.소수 2자리)%.
-    statsAchieveLabel: "달성률",
-    statsAchieveLabelFontSize: 14,
-    statsAchieveLabelColor: "#cccccc",
-    statsAchieveFontSize: 48,
-    statsAchieveDecFontSize: 32,
-    statsAchieveColGap: 20, // 난이도 박스와 달성률 영역 사이 가로 간격
-
-    // 곡별 SKILL (고유 아이콘 + 라벨 + 점수). 점수는 정수 3자리.소수 2자리.
-    statsSkillIconSize: 72,
-    statsSkillIconColor: "#ffcc33",
-    statsSkillLabel: "곡별 SKILL",
-    statsSkillLabelFontSize: 22,
-    statsSkillLabelColor: "#ffffff",
-    statsSkillFontSize: 64,
-    statsSkillDecFontSize: 44,
-
-    // ── 우측 프레이즈 미터 (프레이즈 프레임 영역). 옵션 무관 고정 구조, 값 임시 추정치 ──
-    //   세로 범위: 아래(곡 시작 t=0) ~ 위(곡 끝). 곡 진행에 따라 분홍 진행 바가 아래→위로 차오른다.
-    //   바닥은 Reverse 판정선보다 phraseMeterBottomGap 아래, 천장은 Normal 판정선보다 phraseMeterTopGap 아래.
-    phraseMeterBottomGap: 50, // Reverse(judgelinePosition=0) 판정선 아래로 내린 거리(미터 바닥)
-    phraseMeterTopGap: 20, // Normal(judgelinePosition=0) 판정선 아래로 내린 거리(미터 천장)
-    phraseMeterLeft: 1163, // 프레이즈 바 좌측 X (프레이즈 프레임 안)
-    phraseBarWidth: 60, // 프레이즈 바 너비
-    phraseMeterGap: 6, // 바 사이 가로 간격 (프레이즈/콤보/기록 바)
-    comboBarWidth: 10, // 콤보 바(현재 플레이, 굵은) 너비
-    recordBarWidth: 5, // 기록 콤보 바(최고 기록, 가는) 너비
-    comboBarDivisions: 50, // 콤보 바 등분 수 (곡 시작~끝)
-    phraseMeterBgColor: "#000000", // 프레이즈 바 배경
-    phraseMeterProgressColor: "#cc44ff", // 현재 위치 표시 막대(보라)
-    phraseMeterProgressThickness: 6, // 현재 위치 표시 막대 두께(px)
-    phraseMeterDividerColor: "#ffffff", // 프레이즈 구분선
-    phraseMeterDividerWidth: 1,
-    phraseMeterYellow: "#ffdd33", // 성공(프레이즈) / 콤보 유지(콤보 바)
-    phraseMeterBlue: "#3a7bd5", // 실패(프레이즈) / 미스(콤보 바)
-    phraseMeterGray: "#555555", // 콤보 바 미진행(기본) 색
-    phraseNameColor: "#ffffff",
-    phraseNameFontSize: 11,
-    phraseNamePadX: 3, // 프레이즈 이름 좌측 안쪽 여백
-    phraseNamePadY: 3, // 프레이즈 이름과 시작 구분선 사이 여백
-    phraseFirstName: "Intro", // 첫 프레이즈 이름
-    phraseLastName: "Outro", // 끝 프레이즈 이름
-
     // 배경
     bgColor: "#0a0a14", // 화면 전체 배경
     laneBgColor: "#111120", // 레인 영역 배경
@@ -263,22 +146,19 @@ const PROFILE = {
     wailingColor: "#ff4444",
     wailingBorderColor: "#ffffff",
 
-    // ── 입력 시뮬레이션 (오토 재생 가상 입력) ──
-    // 키빔: 넥 버튼(1~5)이 눌린 동안 레인 중앙에 노트색 실선을 레인 전체 길이로 그린다.
-    // 오픈픽·웨일링은 키빔이 없다.
-    keyBeamWidth: 1, // 키빔 두께 (px)
-    keyHoldPreMs: 1000, // 노트 처리 전 키 유지 시간(ms)
-    keyHoldPostMs: 1000, // 노트 처리 후 키 유지 시간(ms)
-
-    // 판정 윈도우 (|피킹시각 − 노트시각|, ms). OK 윈도우 초과 시 자동 Miss.
-    judgeWindowPerfectMs: 33,
-    judgeWindowGreatMs: 48,
-    judgeWindowGoodMs: 72,
-    judgeWindowOkMs: 115,
-    judgeWindowMissMs: 150, // 이 시간을 넘기면 자동 Miss 처리
-
-    // 웨일링 입력 유효 시간(ms) — 웨일링 노트가 판정선에 닿은 뒤 이 시간 내 입력하면 성공.
-    wailingInputWindowMs: 1000,
+    // ── 노트 처리 이펙트 (임시 추정치 — 개략 표시, 추후 보정) ──
+    // 폭발: 표시 판정선 위 해당 라인 중심에 노트색 원이 커지며 사라진다(오픈픽은 전 라인).
+    explosionMaxRadius: 40, // 폭발 원 최대 반지름 (px)
+    explosionRingWidth: 4, // 폭발 외곽 링 두께 (px)
+    explosionDurationMs: 300, // 폭발 1회 지속 시간 (ms)
+    // 판정 표시: 기본 판정선(판정선 위치 옵션 무관) 기준 노트가 오는 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+    judgeTextLabel: "Perfect",
+    judgeTextOffsetPx: 200, // 기본 판정선에서 노트가 오는(상류) 방향으로 띄우는 거리 (px)
+    judgeTextFontSize: 44, // "Perfect" 글자 크기 (px)
+    judgeTextColor: "#ffee88",
+    judgeTextOutlineColor: "#000000",
+    judgeTextOutlineWidth: 4, // 글자 검은 테두리 두께 (px)
+    judgeTextDurationMs: 400, // 판정 표시 1회 지속 시간 (ms)
 };
 
 // ---- 노트 레인 해석 ----
@@ -345,25 +225,6 @@ function loadChart() {
     return { notes, cycle: parsed.cycle, timing: parsed.timing };
 }
 
-// 프레이즈(기타도라 달성률 구간) 경계 계산.
-// 곡을 n등분한 구간이며 구간 사이 빈 곳은 없다. PHRASE_LANE 노트 = 각 프레이즈의 "끝".
-// BMS는 노트 외 사운드(BGM 등)가 있어 스크립트만으론 실제 곡 끝을 알 수 없으므로,
-// 마지막 프레이즈 노트가 곡 끝을 정의한다(그 노트가 든 마디의 끝 = 곡 끝 = 루프 지점 = cycle.timeMs).
-// 따라서 프레이즈 수 = 프레이즈 노트 수. 첫 프레이즈는 곡 시작(0)부터 시작한다.
-// (마지막 프레이즈 노트는 모든 게임플레이 노트보다 뒤여야 한다 — 스크립트 작성 규칙.)
-function computePhrases(chart) {
-    const ends = chart.notes
-        .filter((n) => n.kind === "phrase" && n.timeMs > 0)
-        .map((n) => n.timeMs)
-        .sort((a, b) => a - b);
-    const bounds = [0, ...ends];
-    const phrases = [];
-    for (let i = 0; i + 1 < bounds.length; i++) {
-        phrases.push({ startMs: bounds[i], endMs: bounds[i + 1] });
-    }
-    return phrases;
-}
-
 // ---- 모듈 상태 ----
 
 let _canvas = null;
@@ -372,10 +233,16 @@ let _running = false;
 let _songTime = 0;
 let _lastFrameTime = 0;
 let _chart = null; // 파싱된 BMS 차트 (notes, cycle, timing)
-let _phrases = []; // 프레이즈 경계 구간 [{ startMs, endMs }, ...]
-let _inputSchedule = null; // 가상 입력 스케줄 (키빔 구간 + 판정/콤보 결과)
-let _recordComboPattern = []; // 기록 콤보 바 패턴(등분별 true=콤보/false=미스). 프리뷰는 랜덤.
 let _freezeRemaining = 0; // 곡 시작 대기 잔여 시간(초). >0이면 노트 정지(표시만).
+
+// 이펙트 타이머(ms). 매 프레임 dt만큼 누적해 이펙트 진행을 잰다(정지 시 멈춤).
+let _animClock = 0;
+// 폭발 이펙트(노트 단위, 라인 연동) { start, lanes:[{lane,color}] } | null. start는 _animClock 기준.
+// 기타도라는 코드(화음) 전체가 한 노트라 폭발도 노트 단위다 — 새 노트 처리 시 진행 중이던
+// 폭발을 통째로 교체(취소·재시작)하고, 한 노트의 여러 라인은 같은 start로 함께 진행한다.
+let _explosionFx = null;
+// 판정 표시 이펙트 { start } | null. 노트 처리 때마다 재시작.
+let _judgeFx = null;
 
 // ---- 유틸 ----
 
@@ -469,148 +336,7 @@ function getNoteX(lane) {
     );
 }
 
-// ---- 입력 시뮬레이션 ----
-
-// 겹치거나 맞닿는 구간을 병합한다 ([start, end] 배열, 초 단위).
-function mergeIntervals(list) {
-    if (list.length === 0) return [];
-    const sorted = [...list].sort((a, b) => a[0] - b[0]);
-    const out = [sorted[0].slice()];
-    for (let i = 1; i < sorted.length; i++) {
-        const last = out[out.length - 1];
-        if (sorted[i][0] <= last[1]) {
-            last[1] = Math.max(last[1], sorted[i][1]);
-        } else {
-            out.push(sorted[i].slice());
-        }
-    }
-    return out;
-}
-
-// 피킹 편차(ms)를 판정으로 분류한다. OK 윈도우를 넘기면 Miss.
-function classifyJudge(diffMs) {
-    const a = Math.abs(diffMs);
-    if (a <= PROFILE.judgeWindowPerfectMs) return "perfect";
-    if (a <= PROFILE.judgeWindowGreatMs) return "great";
-    if (a <= PROFILE.judgeWindowGoodMs) return "good";
-    if (a <= PROFILE.judgeWindowOkMs) return "ok";
-    return "miss";
-}
-
-// 가상 입력 스케줄을 차트로부터 계산한다.
-//  - beams: 넥 버튼(1~5)별 키빔 점등 구간(초). 각 피킹 그룹이 자기 버튼을 쥐고 있는 구간을 경계로 분할해 만든다.
-//    한 그룹은 기본 [처리−pre, 처리+post] 동안 점등하되, 다음 그룹이 처리 후 유지시간 안에 오면 그 다음 그룹의
-//    pre 시작점에서 버튼을 다음 그룹 버튼으로 넘긴다 — 즉 두 그룹이 겹쳐 함께 눌려 있지 않고, 이전 그룹의 전용
-//    버튼은 전환 시점에 떼어진다(다음 코드가 다르면 손가락을 바꾼다). 같은 버튼이 연속되면 경계가 맞닿아 연속 점등.
-//    롱노트는 머리~꼬리 내내 쥐고 있으므로 그 레인은 꼬리+post까지 유지한다(경계 분할 무시).
-//  - judgments/wailings/counts/maxCombo: 처리 결과. 오토 재생이라 피킹이 노트 시각과 정확히 일치 → 전부 Perfect/성공.
-//    노트 레인의 노트 1개 = 한 콤보(한 번의 피킹). 넥버튼은 buttons 비트마스크에서 펼친다.
-// TODO(미사용): judgments/wailings/counts/maxCombo는 추후 콤보·판정 애니메이션/통계 표시에 사용 예정.
-function computeInputSchedule(chart) {
-    const pre = PROFILE.keyHoldPreMs / 1000;
-    const post = PROFILE.keyHoldPostMs / 1000;
-
-    // 1) 피킹 그룹 — 노트 레인의 노트 1개 = 한 그룹(한 콤보, 한 번의 피킹). buttons에서 눌리는
-    //    넥버튼 레인(1~5)을 펼치고, 오픈픽은 별도로 표시한다. longTails[lane] = 롱노트 꼬리 시각(초).
-    const groups = chart.notes
-        .filter((n) => n.kind === "note")
-        .map((n) => {
-            const neck = neckButtonsOf(n.buttons);
-            const lanes = [];
-            const longTails = {};
-            for (let b = 1; b <= BUTTON_COUNT; b++) {
-                if (!(neck & (1 << (b - 1)))) continue;
-                lanes.push(b);
-                if (n.endTimeMs != null) longTails[b] = n.endTimeMs / 1000;
-            }
-            return {
-                timeMs: n.timeMs,
-                t: n.timeMs / 1000,
-                lanes,
-                openPick: isOpenPick(n.buttons),
-                longTails,
-            };
-        })
-        .sort((a, b) => a.t - b.t);
-
-    // 2) 넥 버튼(1~5) 키빔 구간 — 그룹별 점등 구간을 인접 그룹과의 전환 경계로 잘라 만든다.
-    //    이전 그룹과 겹치면 점등 시작을 이전 그룹 처리시각까지로 미루고(holdStart), 다음 그룹의 pre가
-    //    처리 후 유지시간 안에서 시작되면 거기서 점등을 끊는다(holdEnd) → 다음 그룹 버튼으로 전환.
-    //    멀리 떨어진 그룹끼리는 경계가 [t−pre,t+post] 밖이라 그 사이에 빈 구간(버튼 뗌)이 생긴다.
-    const laneIntervals = {};
-    for (let l = 1; l <= BUTTON_COUNT; l++) laneIntervals[l] = [];
-    for (let i = 0; i < groups.length; i++) {
-        const g = groups[i];
-        const prev = groups[i - 1];
-        const next = groups[i + 1];
-        const holdStart = prev ? Math.max(g.t - pre, prev.t) : g.t - pre;
-        const holdEnd = next
-            ? Math.min(g.t + post, Math.max(g.t, next.t - pre))
-            : g.t + post;
-        for (const lane of g.lanes) {
-            const tail = g.longTails[lane];
-            // 롱노트 레인은 꼬리+post까지(경계 분할 무시), 탭은 전환 경계까지.
-            const end = tail != null ? tail + post : holdEnd;
-            laneIntervals[lane].push([holdStart, end]);
-        }
-    }
-    const beams = {};
-    for (let l = 1; l <= BUTTON_COUNT; l++) {
-        beams[l] = mergeIntervals(laneIntervals[l]);
-    }
-
-    // 3) 판정 이벤트 — 그룹별. 오토 재생이라 피킹 편차 0 → 전부 Perfect.
-    const judgments = groups.map((g) => ({
-        timeMs: g.timeMs,
-        lanes: g.lanes.slice().sort((a, b) => a - b),
-        openPick: g.openPick,
-        pickDiffMs: 0, // 오토 = 정확히 처리(편차 0)
-        judge: classifyJudge(0), // perfect
-    }));
-
-    // 4) 웨일링 — 오토는 판정선 도달 즉시 입력 → 성공.
-    const wailings = chart.notes
-        .filter((n) => n.kind === "wailing")
-        .map((n) => ({ timeMs: n.timeMs, dir: n.dir, success: true }))
-        .sort((a, b) => a.timeMs - b.timeMs);
-
-    // 처리 결과 집계 (오토라 전부 Perfect, maxCombo = 콤보(그룹) 수).
-    const counts = { perfect: 0, great: 0, good: 0, ok: 0, miss: 0 };
-    for (const j of judgments) counts[j.judge]++;
-
-    return { beams, judgments, wailings, counts, maxCombo: judgments.length };
-}
-
-// 넥 버튼 lane(1~5)이 songTime에 눌려 있는가(키빔 점등 여부).
-function isLaneBeamOn(lane, songTime) {
-    if (!_inputSchedule) return false;
-    const intervals = _inputSchedule.beams[lane];
-    if (!intervals) return false;
-    for (const [down, up] of intervals) {
-        if (songTime >= down && songTime <= up) return true;
-    }
-    return false;
-}
-
 // ---- 드로우 함수 ----
-
-// 키빔 — 눌린 넥 버튼(1~5)의 레인 중앙에 노트색 실선을 레인 전체(laneTop~laneBottom)로 그린다.
-// 노트 등장 마스크 이후·커버 이전에 호출돼 레인 전체에 보이되 서든/히든에는 함께 가려진다.
-// (넥 버튼만 키빔이 있다 — 오픈픽·웨일링은 키빔 없음.)
-function drawKeyBeams(ctx, songTime) {
-    const { laneTop, laneBottom, keyBeamWidth, noteColors } = PROFILE;
-    const noteWidth = getNoteWidth();
-    ctx.lineWidth = keyBeamWidth;
-    for (let lane = 1; lane <= BUTTON_COUNT; lane++) {
-        if (!isLaneBeamOn(lane, songTime)) continue;
-        const cx = getNoteX(lane) + noteWidth / 2;
-        ctx.strokeStyle = noteColors[lane];
-        ctx.beginPath();
-        ctx.moveTo(cx, laneTop);
-        ctx.lineTo(cx, laneBottom);
-        ctx.stroke();
-    }
-}
 
 function drawBackground(ctx) {
     const {
@@ -934,7 +660,8 @@ function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const textLen = ctx.measureText("Hold").width;
-        const textCenterY = startY + towardTail * (longNoteHoldGap + textLen / 2);
+        const textCenterY =
+            startY + towardTail * (longNoteHoldGap + textLen / 2);
         ctx.translate(x + buttonWidth / 2, textCenterY);
         ctx.rotate((towardTail * Math.PI) / 2); // H가 시작(판정선) 쪽
         ctx.fillStyle = longNoteHoldColor;
@@ -996,6 +723,131 @@ function drawJudgeLine(ctx) {
     ctx.strokeStyle = judgeLineColor;
     ctx.lineWidth = lw;
     ctx.strokeRect(laneLeft + lw / 2, y - h / 2 + lw / 2, w - lw, h - lw);
+}
+
+// ---- 노트 처리 이펙트 ----
+
+// 노트 처리 이벤트 발생 시 호출 — 폭발(라인별)·판정 표시를 (재)시작한다.
+// 이미 진행 중인 이펙트는 start를 현재 시각으로 덮어써 처음부터 다시 재생한다.
+function triggerNoteEffects(note) {
+    const now = _animClock;
+    const lanes = [];
+    if (isOpenPick(note.buttons)) {
+        // 오픈픽: 모든 라인에서 폭발.
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    } else {
+        const neck = neckButtonsOf(note.buttons);
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            if (!(neck & (1 << (b - 1)))) continue;
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    }
+    // 노트 단위로 폭발을 통째 교체 → 진행 중이던 다른 라인 폭발도 함께 취소·재시작.
+    if (lanes.length > 0) _explosionFx = { start: now, lanes };
+    _judgeFx = { start: now };
+}
+
+// prevTime~curTime(초) 사이에 내부 판정선을 지난(처리된) 노트를 찾아 이펙트를 발동한다.
+// 노트의 처리 시각 = note.timeMs(머리). 롱노트도 머리 처리 시점에 발동한다.
+function detectNoteProcessing(prevTime, curTime) {
+    if (curTime <= prevTime) return; // 되감기/루프 등 시간 역행 시 무시
+    for (const note of _chart.notes) {
+        if (note.kind !== "note") continue;
+        const t = note.timeMs / 1000;
+        if (t > prevTime && t <= curTime) triggerNoteEffects(note);
+    }
+}
+
+// 이펙트(폭발·판정 표시) 그리기. 진행 비율(0~1)이 1을 넘으면 제거한다.
+function drawEffects(ctx) {
+    const now = _animClock;
+
+    if (_explosionFx) {
+        const p = (now - _explosionFx.start) / PROFILE.explosionDurationMs;
+        if (p >= 1) {
+            _explosionFx = null;
+        } else {
+            for (const { lane, color } of _explosionFx.lanes) {
+                drawExplosion(ctx, lane, color, p);
+            }
+        }
+    }
+
+    if (_judgeFx) {
+        const p = (now - _judgeFx.start) / PROFILE.judgeTextDurationMs;
+        if (p >= 1) _judgeFx = null;
+        else drawJudgeText(ctx, p);
+    }
+}
+
+// 라인 b의 폭발 — 표시 판정선 위 라인 중심에 노트색 원이 커지며 옅어진다.
+function drawExplosion(ctx, b, color, p) {
+    const { explosionMaxRadius, explosionRingWidth } = PROFILE;
+    const cx = getNoteX(b) + getNoteWidth() / 2;
+    const cy = getVisualJudgeLineY(_config);
+    const ease = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    const r = explosionMaxRadius * ease;
+    const alpha = 1 - p;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = explosionRingWidth;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+    ctx.restore();
+}
+
+// 판정 표시의 기준 Y — judgelinePosition을 무시한 기본 판정선 위치(방향만 반영).
+// 판정 라인 위치 옵션을 바꿔도 Perfect 글자가 움직이지 않도록 고정 앵커로 쓴다.
+function getJudgeTextAnchorY(cfg) {
+    return cfg.direction === 1
+        ? PROFILE.judgeLineYReverse
+        : PROFILE.judgeLineYNormal;
+}
+
+// 판정 표시 — 기본 판정선에서 노트가 오는(상류) 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+function drawJudgeText(ctx, p) {
+    const {
+        laneLeft,
+        buttonRight,
+        judgeTextLabel,
+        judgeTextOffsetPx,
+        judgeTextFontSize,
+        judgeTextColor,
+        judgeTextOutlineColor,
+        judgeTextOutlineWidth,
+    } = PROFILE;
+    const dir = _config.direction;
+    const cx = (laneLeft + buttonRight) / 2;
+    // 앵커는 기본 판정선(판정선 위치 옵션 무관). 노트가 오는 방향(상류, 진행의 반대)으로 띄운다.
+    // Reverse(dir=1)는 위, Normal은 아래.
+    const cy = getJudgeTextAnchorY(_config) - dir * judgeTextOffsetPx;
+
+    // 등장(빠르게 키움) → 유지 → 소멸(옅어짐) 간략 엔벨로프.
+    const scale = 0.6 + 0.4 * Math.min(1, p / 0.2); // 앞 20% 동안 팝업
+    const alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4; // 뒤 40% 동안 페이드아웃
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.font = `bold ${judgeTextFontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = judgeTextOutlineWidth;
+    ctx.strokeStyle = judgeTextOutlineColor;
+    ctx.strokeText(judgeTextLabel, 0, 0);
+    ctx.fillStyle = judgeTextColor;
+    ctx.fillText(judgeTextLabel, 0, 0);
+    ctx.restore();
 }
 
 // 노트 등장 마스크.
@@ -1187,475 +1039,6 @@ function drawFrame(ctx) {
     ctx.fillRect(hpBarX, hpBarY, hpBarW * ratio, hudHpBarHeight);
 }
 
-// ---- 좌측 스탯 패널 (판정 카운트·달성률·곡 SKILL) ----
-
-// songTime까지 처리된 노트만 집계한다(프리뷰 연주 진행에 따라 라이브로 증가).
-// 달성률 = PERFECT비율·GREAT비율·최대콤보비율·프레이즈 달성비율의 가중합(가중치는 본 함수 내 게임 규칙).
-// 곡별 SKILL = 난이도 × 달성률(0~1) × 20. 프레이즈는 끝(endMs)이 지나면 달성으로 본다(오토라 풀콤보).
-function computeLiveStats(songTime) {
-    const tMs = songTime * 1000;
-    const counts = { perfect: 0, great: 0, good: 0, ok: 0, miss: 0 };
-    let combo = 0;
-    let maxCombo = 0;
-    let total = 0;
-    if (_inputSchedule) {
-        total = _inputSchedule.judgments.length;
-        for (const j of _inputSchedule.judgments) {
-            if (j.timeMs > tMs) continue;
-            counts[j.judge]++;
-            if (j.judge === "miss") combo = 0;
-            else if (++combo > maxCombo) maxCombo = combo;
-        }
-    }
-    const totalPhrases = _phrases.length;
-    let achievedPhrases = 0;
-    for (const p of _phrases) if (p.endMs <= tMs) achievedPhrases++;
-
-    const denom = total || 1;
-    const phraseRatio = totalPhrases ? achievedPhrases / totalPhrases : 0;
-    const achievement =
-        (counts.perfect / denom) * 0.85 +
-        (counts.great / denom) * 0.25 +
-        (maxCombo / denom) * 0.05 +
-        phraseRatio * 0.1;
-    const difficulty = PROFILE.statsChartDifficulty;
-    return {
-        counts,
-        maxCombo,
-        total,
-        achievement,
-        skill: difficulty * achievement * 20,
-        difficulty,
-    };
-}
-
-// 숫자를 글자별 세그먼트({ text, size, color })로 분해한다(모든 숫자 공통 규칙).
-//  - 정수부는 intDigits 자리로 0 채움. 첫 유효숫자 앞의 0(앞자리 0)은 회색, 그 외는 흰색.
-//    값이 0이면 마지막 한 자리만 흰색.
-//  - decimals>0이면 소수부를 더 작은 글자(decSize)로 붙인다.
-//  - suffix(예: 단위 기호)가 있으면 소수부 크기로 끝에 붙인다.
-function numberSegments(value, intDigits, decimals, intSize, decSize, suffix) {
-    const factor = Math.pow(10, decimals);
-    const scaled = Math.round(Math.abs(value) * factor);
-    const intPart = Math.floor(scaled / factor);
-    const decVal = scaled - intPart * factor;
-    let intStr = String(intPart);
-    if (intStr.length < intDigits) {
-        intStr = "0".repeat(intDigits - intStr.length) + intStr;
-    }
-    let firstNonZero = -1;
-    for (let i = 0; i < intStr.length; i++) {
-        if (intStr[i] !== "0") {
-            firstNonZero = i;
-            break;
-        }
-    }
-    const grayUntil = firstNonZero === -1 ? intStr.length - 1 : firstNonZero;
-    const segs = [];
-    for (let i = 0; i < intStr.length; i++) {
-        segs.push({
-            text: intStr[i],
-            size: intSize,
-            color: i < grayUntil ? PROFILE.statsZeroColor : PROFILE.statsNumberColor,
-        });
-    }
-    if (decimals > 0) {
-        let decStr = String(decVal);
-        if (decStr.length < decimals) {
-            decStr = "0".repeat(decimals - decStr.length) + decStr;
-        }
-        segs.push({ text: ".", size: decSize, color: PROFILE.statsNumberColor });
-        for (const c of decStr) {
-            segs.push({ text: c, size: decSize, color: PROFILE.statsNumberColor });
-        }
-    }
-    if (suffix) {
-        segs.push({ text: suffix, size: decSize, color: PROFILE.statsSuffixColor });
-    }
-    return segs;
-}
-
-function measureSegments(ctx, segs) {
-    let total = 0;
-    for (const s of segs) {
-        ctx.font = `bold ${s.size}px sans-serif`;
-        total += ctx.measureText(s.text).width;
-    }
-    return total;
-}
-
-// 세그먼트들을 startX부터 좌→우로, baselineY(alphabetic 기준)에 그린다.
-function drawSegmentsFrom(ctx, segs, startX, baselineY) {
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    let x = startX;
-    for (const s of segs) {
-        ctx.font = `bold ${s.size}px sans-serif`;
-        ctx.fillStyle = s.color;
-        ctx.fillText(s.text, x, baselineY);
-        x += ctx.measureText(s.text).width;
-    }
-}
-
-function drawSegmentsRight(ctx, segs, rightX, baselineY) {
-    drawSegmentsFrom(ctx, segs, rightX - measureSegments(ctx, segs), baselineY);
-}
-
-function drawSegmentsCenter(ctx, segs, centerX, baselineY) {
-    drawSegmentsFrom(ctx, segs, centerX - measureSegments(ctx, segs) / 2, baselineY);
-}
-
-// 곡별 SKILL 고유 아이콘 — 우상단으로 내지르는 주먹(손목까지)이 덤벨을 쥔 모습(개략 표현).
-// 로컬 +x = 주먹을 내지르는 방향(우상단). 덤벨 바는 팔뚝에 수직(로컬 세로축),
-// 양 끝에 서로 붙은 3단 원판(바깥일수록 작다)이 달려 있다. 손가락 구분선은 바를 가로질러
-// 감싸는 방향(바에 수직)으로 그린다. 손목은 바벨 지점까지만 보이며 끝이 직선으로 잘린다(사각형 컷).
-function drawSkillIcon(ctx, x, y, size) {
-    const color = PROFILE.statsSkillIconColor;
-    ctx.save();
-    ctx.translate(x + size / 2, y + size / 2);
-    ctx.rotate(-Math.PI / 4); // 주먹을 우상단으로 내지르는 방향
-    ctx.fillStyle = color;
-
-    const fistCX = size * 0.2; // 주먹(쥔 지점) X — 우상단 쪽
-
-    // 손목/팔뚝 — 좌하단 손목 컷에서 바벨 지점까지. 직선(사각형) 컷이 되도록 fillRect.
-    const armThick = size * 0.24;
-    const wristX = -size * 0.42; // 손목 컷 위치(좌하단 끝, 직선)
-    ctx.fillRect(wristX, -armThick / 2, fistCX - wristX, armThick);
-
-    // 덤벨 바 (팔뚝에 수직 = 로컬 세로축), 주먹 지점을 관통.
-    const barThick = size * 0.1;
-    const barHalf = size * 0.42;
-    ctx.fillRect(fistCX - barThick / 2, -barHalf, barThick, barHalf * 2);
-
-    // 양 끝 3단 원판 — 서로 붙어 있고(틈 없음) 바깥(tip)일수록 작다.
-    const plateH = size * 0.075;
-    const plateHalfW = [0.15, 0.22, 0.29]; // tip→안쪽 반너비 (size 배수)
-    for (const sign of [-1, 1]) {
-        for (let k = 0; k < 3; k++) {
-            const cy = sign * (barHalf - plateH * (k + 0.5));
-            const hw = size * plateHalfW[k];
-            ctx.fillRect(fistCX - hw, cy - plateH / 2, hw * 2, plateH);
-        }
-    }
-
-    // 주먹 (둥근 사각형, 바 가운데를 쥔다) + 손가락 구분선(바를 가로질러 감싸는 방향)
-    const fist = size * 0.36;
-    ctx.beginPath();
-    ctx.roundRect(fistCX - fist / 2, -fist / 2, fist, fist, fist * 0.28);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
-    ctx.lineWidth = Math.max(1, size * 0.02);
-    for (let k = -1; k <= 1; k++) {
-        const fy = (k * fist) / 3.2;
-        ctx.beginPath();
-        ctx.moveTo(fistCX - fist * 0.1, fy);
-        ctx.lineTo(fistCX + fist / 2, fy);
-        ctx.stroke();
-    }
-    ctx.restore();
-}
-
-function drawStatsPanel(ctx, songTime) {
-    const P = PROFILE;
-    const panelRight = P.laneLeft - P.laneFrameThickness - P.statsPanelRightGap;
-    const panelLeft = panelRight - P.statsPanelWidth;
-    const panelTop = P.statsPanelTop;
-    const panelW = P.statsPanelWidth;
-    const panelH = P.statsPanelBottom - panelTop;
-    const contentLeft = panelLeft + P.statsPanelPad;
-    const contentRight = panelRight - P.statsPanelPad;
-
-    // 패널: 내부 반투명 검정 + 흰 테두리
-    ctx.fillStyle = P.statsPanelBg;
-    ctx.fillRect(panelLeft, panelTop, panelW, panelH);
-    ctx.strokeStyle = P.statsPanelBorderColor;
-    ctx.lineWidth = P.statsPanelBorderWidth;
-    ctx.strokeRect(panelLeft, panelTop, panelW, panelH);
-
-    let y = panelTop + P.statsPanelPad;
-
-    // 1) 플레이어 이름/칭호 (불투명 검정 백패널)
-    ctx.fillStyle = P.statsNameBg;
-    ctx.fillRect(contentLeft, y, contentRight - contentLeft, P.statsNameBlockHeight);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = P.statsNameColor;
-    ctx.font = `bold ${P.statsNameFontSize}px sans-serif`;
-    ctx.fillText(
-        P.statsPlayerName,
-        contentLeft + P.statsNamePadX,
-        y + P.statsNameBlockHeight * 0.36,
-    );
-    ctx.fillStyle = P.statsTitleColor;
-    ctx.font = `${P.statsTitleFontSize}px sans-serif`;
-    ctx.fillText(
-        P.statsPlayerTitle,
-        contentLeft + P.statsNamePadX,
-        y + P.statsNameBlockHeight * 0.74,
-    );
-    y += P.statsNameBlockHeight + P.statsRowGapTop;
-
-    // 2) 판정 카운트 행 (개수 4자리 + 전체 대비 비율 3자리 %)
-    const stats = computeLiveStats(songTime);
-    const denom = stats.total || 1;
-    const countRightX = contentRight - P.statsPercentColWidth;
-    const rows = [
-        [P.statsJudgeLabels.perfect, P.statsJudgeColors.perfect, stats.counts.perfect],
-        [P.statsJudgeLabels.great, P.statsJudgeColors.great, stats.counts.great],
-        [P.statsJudgeLabels.good, P.statsJudgeColors.good, stats.counts.good],
-        [P.statsJudgeLabels.ok, P.statsJudgeColors.ok, stats.counts.ok],
-        [P.statsJudgeLabels.miss, P.statsJudgeColors.miss, stats.counts.miss],
-        [P.statsComboLabel, P.statsComboColor, stats.maxCombo],
-    ];
-    for (const [label, color, count] of rows) {
-        const rowCenter = y + P.statsRowHeight / 2;
-        const baseline = rowCenter + P.statsCountFontSize * 0.35;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = color;
-        ctx.font = `bold ${P.statsLabelFontSize}px sans-serif`;
-        ctx.fillText(label, contentLeft, rowCenter);
-        drawSegmentsRight(
-            ctx,
-            numberSegments(count, 4, 0, P.statsCountFontSize, P.statsCountFontSize),
-            countRightX,
-            baseline,
-        );
-        const pct = Math.round((count / denom) * 100);
-        drawSegmentsRight(
-            ctx,
-            numberSegments(pct, 3, 0, P.statsPercentFontSize, P.statsPercentFontSize, "%"),
-            contentRight,
-            baseline,
-        );
-        y += P.statsRowHeight + P.statsRowGap;
-    }
-
-    // 구분선
-    y += P.statsSectionGap - P.statsRowGap;
-    drawStatsDivider(ctx, contentLeft, contentRight, y);
-    y += P.statsSectionGap;
-
-    // 3) 보면 난이도 박스 (GUITAR / MASTER / 난이도 숫자) + 달성률
-    const diffTop = y;
-    const boxX = contentLeft;
-    const boxW = P.statsDiffBoxWidth;
-    let cy = diffTop;
-    // 상단 칸: GUITAR
-    // 상단 칸(GUITAR)·하단 칸(난이도 숫자)은 배경 투명 — 글자만 그린다.
-    ctx.fillStyle = P.statsDiffTopTextColor;
-    ctx.font = `bold ${P.statsDiffTopFontSize}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(P.statsDiffTopText, boxX + boxW / 2, cy + P.statsDiffBoxTopCellH / 2);
-    cy += P.statsDiffBoxTopCellH;
-    // 중간 칸: MASTER (이 칸만 배경 있음)
-    ctx.fillStyle = P.statsDiffColor;
-    ctx.fillRect(boxX, cy, boxW, P.statsDiffBoxMidCellH);
-    ctx.fillStyle = P.statsDiffMidTextColor;
-    ctx.font = `bold ${P.statsDiffMidFontSize}px sans-serif`;
-    ctx.fillText(P.statsDiffMidText, boxX + boxW / 2, cy + P.statsDiffBoxMidCellH / 2);
-    cy += P.statsDiffBoxMidCellH;
-    // 하단 칸: 난이도 숫자 (배경 투명)
-    drawSegmentsCenter(
-        ctx,
-        numberSegments(
-            stats.difficulty,
-            1,
-            2,
-            P.statsDiffValueFontSize,
-            P.statsDiffValueDecFontSize,
-        ),
-        boxX + boxW / 2,
-        cy + P.statsDiffBoxBotCellH / 2 + P.statsDiffValueFontSize * 0.35,
-    );
-    const diffBottom = cy + P.statsDiffBoxBotCellH;
-
-    // 박스 외곽 테두리 (위·아래칸이 투명이라 박스 형태가 보이도록 유지)
-    ctx.strokeStyle = P.statsDiffColor;
-    ctx.lineWidth = P.statsDiffBorderWidth;
-    ctx.strokeRect(boxX, diffTop, boxW, diffBottom - diffTop);
-
-    // 달성률 (난이도 박스 우측). 좌상단 작은 라벨 + 큰 숫자.
-    const achLeft = boxX + boxW + P.statsAchieveColGap;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = P.statsAchieveLabelColor;
-    ctx.font = `${P.statsAchieveLabelFontSize}px sans-serif`;
-    ctx.fillText(P.statsAchieveLabel, achLeft, diffTop + P.statsAchieveLabelFontSize);
-    drawSegmentsRight(
-        ctx,
-        numberSegments(
-            stats.achievement * 100,
-            2,
-            2,
-            P.statsAchieveFontSize,
-            P.statsAchieveDecFontSize,
-            "%",
-        ),
-        contentRight,
-        diffBottom - (diffBottom - diffTop) * 0.18,
-    );
-
-    y = diffBottom + P.statsSectionGap;
-    drawStatsDivider(ctx, contentLeft, contentRight, y);
-    y += P.statsSectionGap;
-
-    // 4) 곡별 SKILL (아이콘 + 라벨 + 점수) — 패널 마지막 영역을 채우도록 크게.
-    const iconSize = P.statsSkillIconSize;
-    const skillBottom = P.statsPanelBottom - P.statsPanelPad;
-    drawSkillIcon(ctx, contentLeft, y, iconSize);
-    ctx.fillStyle = P.statsSkillLabelColor;
-    ctx.font = `bold ${P.statsSkillLabelFontSize}px sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(
-        P.statsSkillLabel,
-        contentLeft,
-        y + iconSize + P.statsSkillLabelFontSize,
-    );
-    drawSegmentsRight(
-        ctx,
-        numberSegments(stats.skill, 3, 2, P.statsSkillFontSize, P.statsSkillDecFontSize),
-        contentRight,
-        (y + skillBottom) / 2 + P.statsSkillFontSize * 0.3,
-    );
-
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-}
-
-function drawStatsDivider(ctx, left, right, y) {
-    ctx.strokeStyle = PROFILE.statsDividerColor;
-    ctx.lineWidth = PROFILE.statsDividerWidth;
-    ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.stroke();
-}
-
-// ---- 우측 프레이즈 미터 ----
-
-// 프레이즈 이름: 첫=Intro, 끝=Outro, 중간은 등장 순서대로 Phrase A, B, C, ...
-function phraseLabel(index, count) {
-    if (index === 0) return PROFILE.phraseFirstName;
-    if (index === count - 1) return PROFILE.phraseLastName;
-    return "Phrase " + String.fromCharCode(65 + (index - 1));
-}
-
-// [startMs, endMs) 구간에 Miss 판정이 있었는지(프레이즈 성공/실패, 콤보 바 등분 판정용).
-// 오토 재생이라 현재는 항상 false(전부 성공/콤보). 처리 모드 도입 시 자동 반영.
-function phraseRangeHasMiss(startMs, endMs) {
-    if (!_inputSchedule) return false;
-    for (const j of _inputSchedule.judgments) {
-        if (j.judge === "miss" && j.timeMs >= startMs && j.timeMs < endMs) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// 우측 프레이즈 미터(프레이즈 바 + 현재 콤보 바 + 기록 콤보 바).
-// 곡 진행(songTime)이 아래→위로 반영된다(아래 = 곡 시작, 위 = 마지막 프레이즈 끝).
-// 가동 범위는 곡 끝(cycle)이 아니라 마지막 프레이즈 끝까지다(그 뒤 아웃트로 구간은 미터 밖).
-function drawPhraseMeter(ctx, songTime) {
-    const P = PROFILE;
-    const count = _phrases.length;
-    const rangeMs = count ? _phrases[count - 1].endMs : _chart.cycle.timeMs;
-    if (!(rangeMs > 0)) return;
-
-    const top = P.judgeLineYNormal + P.phraseMeterTopGap;
-    const bottom = P.judgeLineYReverse + P.phraseMeterBottomGap;
-    const span = bottom - top;
-    const tMs = songTime * 1000;
-    // 시각(ms) → Y. 0 = 바닥(곡 시작), rangeMs = 천장(마지막 프레이즈 끝).
-    const yOf = (ms) =>
-        bottom - (Math.max(0, Math.min(rangeMs, ms)) / rangeMs) * span;
-
-    const barX = P.phraseMeterLeft;
-    const barW = P.phraseBarWidth;
-
-    // 프레이즈 바 배경 (검정)
-    ctx.fillStyle = P.phraseMeterBgColor;
-    ctx.fillRect(barX, top, barW, span);
-
-    // 완료된 프레이즈 셀 색칠 (성공=노랑 / 실패=파랑)
-    for (let i = 0; i < count; i++) {
-        const ph = _phrases[i];
-        if (ph.endMs > tMs) continue; // 아직 진행 중/미도달
-        const yTop = yOf(ph.endMs);
-        const yBot = yOf(ph.startMs);
-        ctx.fillStyle = phraseRangeHasMiss(ph.startMs, ph.endMs)
-            ? P.phraseMeterBlue
-            : P.phraseMeterYellow;
-        ctx.fillRect(barX, yTop, barW, yBot - yTop);
-    }
-
-    // 프레이즈 구분선(흰) + 이름(시작 경계 바로 위, 셀 안으로 clip)
-    ctx.strokeStyle = P.phraseMeterDividerColor;
-    ctx.lineWidth = P.phraseMeterDividerWidth;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "bottom";
-    ctx.font = `${P.phraseNameFontSize}px sans-serif`;
-    for (let i = 0; i < count; i++) {
-        const startY = yOf(_phrases[i].startMs);
-        ctx.beginPath();
-        ctx.moveTo(barX, startY);
-        ctx.lineTo(barX + barW, startY);
-        ctx.stroke();
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(barX, top, barW, span);
-        ctx.clip();
-        ctx.fillStyle = P.phraseNameColor;
-        ctx.fillText(
-            phraseLabel(i, count),
-            barX + P.phraseNamePadX,
-            startY - P.phraseNamePadY,
-        );
-        ctx.restore();
-    }
-    // 천장 마감선
-    ctx.beginPath();
-    ctx.moveTo(barX, top);
-    ctx.lineTo(barX + barW, top);
-    ctx.stroke();
-
-    // 현재 위치 표시 막대(보라) — 채우지 않고 현재 진행 위치에 막대로 표시(아래→위로 올라간다).
-    const progFrac = Math.max(0, Math.min(1, tMs / rangeMs));
-    const progY = bottom - progFrac * span;
-    const half = P.phraseMeterProgressThickness / 2;
-    ctx.fillStyle = P.phraseMeterProgressColor;
-    ctx.fillRect(barX, progY - half, barW, P.phraseMeterProgressThickness);
-
-    // 콤보 바(현재 플레이, 굵은) + 기록 콤보 바(가는). 약 100등분, 등분 사이 구분선 없음.
-    // 정수 픽셀 경계를 공유해 인접 등분이 빈틈/겹침 없이 맞닿게 한다(seam 방지).
-    const comboX = barX + barW + P.phraseMeterGap;
-    const recordX = comboX + P.comboBarWidth + P.phraseMeterGap;
-    const N = P.comboBarDivisions;
-    const yb = [];
-    for (let k = 0; k <= N; k++) yb.push(Math.round(yOf((k / N) * rangeMs)));
-    for (let i = 0; i < N; i++) {
-        const yTop = yb[i + 1];
-        const segH = yb[i] - yTop;
-        const segBotMs = (i / N) * rangeMs;
-        const segTopMs = ((i + 1) / N) * rangeMs;
-        // 현재 플레이: 도달 전이면 회색, 도달 후엔 Miss=파랑 / 콤보=노랑.
-        let color;
-        if (segBotMs > tMs) color = P.phraseMeterGray;
-        else color = phraseRangeHasMiss(segBotMs, segTopMs) ? P.phraseMeterBlue : P.phraseMeterYellow;
-        ctx.fillStyle = color;
-        ctx.fillRect(comboX, yTop, P.comboBarWidth, segH);
-        // 기록: 미리 전부 표시(랜덤 패턴).
-        ctx.fillStyle = _recordComboPattern[i] ? P.phraseMeterYellow : P.phraseMeterBlue;
-        ctx.fillRect(recordX, yTop, P.recordBarWidth, segH);
-    }
-
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-}
-
 // ---- 메인 드로우 / 루프 ----
 
 // 한 사이클을 시작(또는 재시작)한다.
@@ -1664,6 +1047,8 @@ function drawPhraseMeter(ctx, songTime) {
 function startCycle() {
     _songTime = -PROFILE.leadInMs / 1000;
     _freezeRemaining = PROFILE.introHoldMs / 1000;
+    _explosionFx = null;
+    _judgeFx = null;
 }
 
 // 현재 사이클의 시각 요소가 화면에서 모두 빠졌는지. 노트는 판정선에서 사라지므로
@@ -1689,23 +1074,24 @@ function draw() {
     drawBeatLines(ctx, _songTime);
     drawNotes(ctx, _songTime);
     drawNoteSpawnMask(ctx);
-    drawKeyBeams(ctx, _songTime);
     drawCovers(ctx);
     drawJudgeLine(ctx);
+    drawEffects(ctx);
     drawFrame(ctx);
-    drawStatsPanel(ctx, _songTime);
-    drawPhraseMeter(ctx, _songTime);
 }
 
 function loop(now) {
     if (!_running) return;
     const dt = (now - _lastFrameTime) / 1000;
     _lastFrameTime = now;
+    _animClock += dt * 1000; // 이펙트 타이머는 항상 진행
     if (_freezeRemaining > 0) {
         // 곡 시작 대기: 노트는 표시되지만 움직이지 않는다(songTime 고정).
         _freezeRemaining -= dt;
     } else {
+        const prevTime = _songTime;
         _songTime += dt;
+        detectNoteProcessing(prevTime, _songTime); // 처리된 노트의 이펙트 발동
         // 곡 끝(cycle)을 지나 화면이 완전히 빈 뒤 다음 사이클을 시작한다(리드인+대기 재개).
         // → 다음 사이클 노트가 현재 사이클이 끝나기 전에 등장하지 않는다.
         const cycleSec = _chart.cycle.timeMs / 1000;
@@ -1757,9 +1143,8 @@ export function getAnalysis(cfg, monitorMetrics) {
     const speed_pps = getSpeedPps(cfg);
     const spawnY = getNoteSpawnY(cfg);
 
-    // 사라지는 기준선: 표시(노란) 판정선.
-    // TODO: 정확한 타이밍 기준을 내부 판정선(getInternalJudgeLineY)으로 할지,
-    //       또는 표시선·내부선 둘 다 표기할지 확인 필요.
+    // 사라지는 기준선: 표시(노란) 판정선. 플레이어가 시각적으로 노트를 맞추는 선 기준의
+    // 표시 시간이므로 noteOffset/judgeOffset(내부 판정선만 이동)에는 영향받지 않는다.
     const judgeY = getVisualJudgeLineY(cfg);
 
     const sudden = cfg.sudden ?? 0;
@@ -1808,14 +1193,8 @@ export function init({ canvas, config }) {
     _canvas = canvas;
     _config = config;
     _running = false;
+    _animClock = 0;
     _chart = loadChart();
-    _phrases = computePhrases(_chart);
-    _inputSchedule = computeInputSchedule(_chart);
-    // 기록 콤보 바: 실제 과거 기록이 없으므로 프리뷰용으로 랜덤 패턴을 한 번 생성(대부분 콤보).
-    _recordComboPattern = Array.from(
-        { length: PROFILE.comboBarDivisions },
-        () => Math.random() < 0.85,
-    );
     startCycle(); // 대기 + 리드인부터 시작
     // 캔버스 내부 해상도를 게임 원본 해상도로 설정
     // CSS width/height:100%가 프리뷰 영역에 맞게 스케일해줌
@@ -1844,23 +1223,6 @@ export function reset() {
 // (재생 중에는 loop()가 매 프레임 그리므로 추가 호출이 무해하다.)
 export function redraw() {
     draw();
-}
-
-// 프레이즈(달성률 구간) 정보. 향후 판정/달성률 표시 기능에서 사용.
-export function getPhraseInfo() {
-    return { count: _phrases.length, phrases: _phrases };
-}
-
-// 가상 입력 처리 결과(판정/콤보 집계). 현재 미사용 — 추후 콤보·판정 애니메이션/통계 표시에 사용 예정.
-// TODO: 표시 기능 미구현(오토 재생이라 현재는 전부 Perfect/성공).
-export function getInputResult() {
-    if (!_inputSchedule) return null;
-    return {
-        judgments: _inputSchedule.judgments,
-        wailings: _inputSchedule.wailings,
-        counts: _inputSchedule.counts,
-        maxCombo: _inputSchedule.maxCombo,
-    };
 }
 
 export const DEFAULT_BMS = `#BPM 175

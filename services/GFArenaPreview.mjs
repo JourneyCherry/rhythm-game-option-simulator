@@ -5,7 +5,7 @@
 // 코나스테와의 주요 차이점 (구체값은 각 PROFILE 상수·game_presets.json 참고):
 //  1. 내부 해상도가 더 큼 (width/height).
 //  2. 레인 좌우 얇은 프레임·프레이즈 프레임 없음. 체력바 HUD 패널이 더 넓음.
-//  3. Normal 옵션 실측값 없음 → Reverse 기준 추정 + TODO.
+//  3. Normal 옵션 실측값 없음 → Reverse를 화면 중심으로 완전 상하 반전(mirrorY)해 사용.
 //  4. 배속 옵션의 범위·단위가 다름.
 //  5. 노트 속도식, 판정선/서든/히든 변동량이 다름.
 
@@ -21,18 +21,15 @@ const PROFILE = {
     buttonRight: 2142, // 5버튼 영역 우측 경계 (= 웨일링 경계)
     wailingRight: 2277, // 웨일링 영역 우측 경계
     // 레인 높이: laneTop ~ noteSpawnYReverse(노트 등장) ~ laneBottom
+    // Normal 모드 기하(레인 범위·판정선·노트 등장·커버·HUD)는 별도 실측값 없이
+    // Reverse를 화면 중심(height/2)으로 상하 반전해 쓴다(mirrorY). 즉 Normal = 완전 상하 대칭.
     laneTop: 201,
     noteSpawnYReverse: 312, // Reverse 기준 노트 최초 등장(첫 노출) Y — 실측
-    noteSpawnYNormal: 1997, // TODO: Normal 실측값 없음 — judgeLineYNormal과 같은 대칭축 근거로 역산한 추정값
 
     laneBottom: 2160,
 
-    // 판정선 — Reverse는 실측.
+    // 판정선 — Reverse는 실측. Normal은 mirrorY로 상하 반전(별도 상수 없음).
     judgeLineYReverse: 1852, // judgelinePosition=0 기준 Y
-    // TODO: Normal 실측값 없음 — 추정값.
-    //   코나스테 Reverse↔Normal 판정선이 레인 높이 내 일정 비율 지점을 대칭축으로 거의 마주보는 데 착안,
-    //   같은 비율로 아레나 레인의 대칭축을 잡고 judgeLineYReverse를 그 축에 반사(2×축−Reverse)해 역산했다.
-    judgeLineYNormal: 457,
     judgeLineThickness: 15, // 판정선 외부 높이 (px) — 실측
     judgeLineStrokeWidth: 3, // 판정선 테두리 두께 (px) — 추정
 
@@ -153,22 +150,19 @@ const PROFILE = {
     wailingColor: "#ff4444",
     wailingBorderColor: "#ffffff",
 
-    // ── 입력 시뮬레이션 (오토 재생 가상 입력) ──
-    // 키빔: 넥 버튼(1~5)이 눌린 동안 레인 중앙에 노트색 실선을 레인 전체 길이로 그린다.
-    // 오픈픽·웨일링은 키빔이 없다.
-    keyBeamWidth: 2, // 키빔 두께 (px)
-    keyHoldPreMs: 1000, // 노트 처리 전 키 유지 시간(ms)
-    keyHoldPostMs: 1000, // 노트 처리 후 키 유지 시간(ms)
-
-    // 판정 윈도우 (|피킹시각 − 노트시각|, ms). OK 윈도우 초과 시 자동 Miss.
-    judgeWindowPerfectMs: 33,
-    judgeWindowGreatMs: 48,
-    judgeWindowGoodMs: 72,
-    judgeWindowOkMs: 115,
-    judgeWindowMissMs: 150, // 이 시간을 넘기면 자동 Miss 처리
-
-    // 웨일링 입력 유효 시간(ms) — 웨일링 노트가 판정선에 닿은 뒤 이 시간 내 입력하면 성공.
-    wailingInputWindowMs: 1000,
+    // ── 노트 처리 이펙트 (임시 추정치 — 개략 표시, 추후 보정) ──
+    // 폭발: 표시 판정선 위 해당 라인 중심에 노트색 원이 커지며 사라진다(오픈픽은 전 라인).
+    explosionMaxRadius: 80, // 폭발 원 최대 반지름 (px)
+    explosionRingWidth: 8, // 폭발 외곽 링 두께 (px)
+    explosionDurationMs: 300, // 폭발 1회 지속 시간 (ms)
+    // 판정 표시: 기본 판정선(판정선 위치 옵션 무관) 기준 노트가 오는 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+    judgeTextLabel: "Perfect",
+    judgeTextOffsetPx: 1000, // 기본 판정선에서 노트가 오는(상류) 방향으로 띄우는 거리 (px)
+    judgeTextFontSize: 88, // "Perfect" 글자 크기 (px)
+    judgeTextColor: "#ffee88",
+    judgeTextOutlineColor: "#000000",
+    judgeTextOutlineWidth: 8, // 글자 검은 테두리 두께 (px)
+    judgeTextDurationMs: 400, // 판정 표시 1회 지속 시간 (ms)
 };
 
 // ---- 노트 레인 해석 ----
@@ -235,25 +229,6 @@ function loadChart() {
     return { notes, cycle: parsed.cycle, timing: parsed.timing };
 }
 
-// 프레이즈(기타도라 달성률 구간) 경계 계산.
-// 곡을 n등분한 구간이며 구간 사이 빈 곳은 없다. PHRASE_LANE 노트 = 각 프레이즈의 "끝".
-// BMS는 노트 외 사운드(BGM 등)가 있어 스크립트만으론 실제 곡 끝을 알 수 없으므로,
-// 마지막 프레이즈 노트가 곡 끝을 정의한다(그 노트가 든 마디의 끝 = 곡 끝 = 루프 지점 = cycle.timeMs).
-// 따라서 프레이즈 수 = 프레이즈 노트 수. 첫 프레이즈는 곡 시작(0)부터 시작한다.
-// (마지막 프레이즈 노트는 모든 게임플레이 노트보다 뒤여야 한다 — 스크립트 작성 규칙.)
-function computePhrases(chart) {
-    const ends = chart.notes
-        .filter((n) => n.kind === "phrase" && n.timeMs > 0)
-        .map((n) => n.timeMs)
-        .sort((a, b) => a - b);
-    const bounds = [0, ...ends];
-    const phrases = [];
-    for (let i = 0; i + 1 < bounds.length; i++) {
-        phrases.push({ startMs: bounds[i], endMs: bounds[i + 1] });
-    }
-    return phrases;
-}
-
 // ---- 모듈 상태 ----
 
 let _canvas = null;
@@ -262,9 +237,16 @@ let _running = false;
 let _songTime = 0;
 let _lastFrameTime = 0;
 let _chart = null; // 파싱된 BMS 차트 (notes, cycle, timing)
-let _phrases = []; // 프레이즈 경계 구간 [{ startMs, endMs }, ...]
-let _inputSchedule = null; // 가상 입력 스케줄 (키빔 구간 + 판정/콤보 결과)
 let _freezeRemaining = 0; // 곡 시작 대기 잔여 시간(초). >0이면 노트 정지(표시만).
+
+// 이펙트 타이머(ms). 매 프레임 dt만큼 누적해 이펙트 진행을 잰다(정지 시 멈춤).
+let _animClock = 0;
+// 폭발 이펙트(노트 단위, 라인 연동) { start, lanes:[{lane,color}] } | null. start는 _animClock 기준.
+// 기타도라는 코드(화음) 전체가 한 노트라 폭발도 노트 단위다 — 새 노트 처리 시 진행 중이던
+// 폭발을 통째로 교체(취소·재시작)하고, 한 노트의 여러 라인은 같은 start로 함께 진행한다.
+let _explosionFx = null;
+// 판정 표시 이펙트 { start } | null. 노트 처리 때마다 재시작.
+let _judgeFx = null;
 
 // ---- 유틸 ----
 
@@ -276,6 +258,22 @@ function getSpeedPpf(cfg) {
 // 노트 속도 (px/sec) — 게임은 fps 기준이므로 ppf × fps.
 function getSpeedPps(cfg) {
     return getSpeedPpf(cfg) * PROFILE.fps;
+}
+
+// Normal 모드 좌표 = Reverse 좌표를 화면 중심(height/2)으로 상하 반전한 값. normalY = height − reverseY.
+// Reverse만 실측이고 Normal은 그 완전 상하 대칭이므로 모든 Normal 기하를 이 함수로 역산한다.
+function mirrorY(y) {
+    return PROFILE.height - y;
+}
+
+// 레인 세로 범위 — Reverse는 실측(laneTop~laneBottom), Normal은 그 상하 반전.
+// laneBottom이 화면 최하단이라 Normal 레인은 화면 최상단(0)에서 시작하고
+// 아래쪽(height−laneTop ~ height)이 HUD 자리로 비워진다.
+function getLaneTop(cfg) {
+    return cfg.direction === 1 ? PROFILE.laneTop : mirrorY(PROFILE.laneBottom);
+}
+function getLaneBottom(cfg) {
+    return cfg.direction === 1 ? PROFILE.laneBottom : mirrorY(PROFILE.laneTop);
 }
 
 // 판정선 위치 옵션(judgelinePosition) → 이동 픽셀(절대값, 부호 포함).
@@ -292,13 +290,10 @@ function getJudgelineOffsetPx(pos) {
 function getVisualJudgeLineY(cfg) {
     const pos = cfg.judgelinePosition ?? 0;
     const posOffsetPx = getJudgelineOffsetPx(pos);
+    const reverseY = PROFILE.judgeLineYReverse - posOffsetPx;
 
-    if (cfg.direction === 1) {
-        return PROFILE.judgeLineYReverse - posOffsetPx;
-    } else {
-        // Normal: 옵션값이 커질수록 아래로 내려감 (Y 증가). 변동량·범위는 Reverse와 동일.
-        return PROFILE.judgeLineYNormal + posOffsetPx;
-    }
+    // Normal은 Reverse 판정선 위치를 화면 중심으로 상하 반전한다(옵션값↑ → 아래로 내려감).
+    return cfg.direction === 1 ? reverseY : mirrorY(reverseY);
 }
 
 // 내부(처리) 판정선 Y 좌표 — 표시 판정선에 타이밍 오프셋을 더한 위치.
@@ -327,7 +322,7 @@ function getInternalJudgeLineY(cfg) {
 function getNoteSpawnY(cfg) {
     return cfg.direction === 1
         ? PROFILE.noteSpawnYReverse
-        : PROFILE.noteSpawnYNormal;
+        : mirrorY(PROFILE.noteSpawnYReverse);
 }
 
 // y = judgeLineY - direction * (noteTime - songTime) * speed_pps
@@ -366,148 +361,7 @@ function getNoteX(lane) {
     );
 }
 
-// ---- 입력 시뮬레이션 ----
-
-// 겹치거나 맞닿는 구간을 병합한다 ([start, end] 배열, 초 단위).
-function mergeIntervals(list) {
-    if (list.length === 0) return [];
-    const sorted = [...list].sort((a, b) => a[0] - b[0]);
-    const out = [sorted[0].slice()];
-    for (let i = 1; i < sorted.length; i++) {
-        const last = out[out.length - 1];
-        if (sorted[i][0] <= last[1]) {
-            last[1] = Math.max(last[1], sorted[i][1]);
-        } else {
-            out.push(sorted[i].slice());
-        }
-    }
-    return out;
-}
-
-// 피킹 편차(ms)를 판정으로 분류한다. OK 윈도우를 넘기면 Miss.
-function classifyJudge(diffMs) {
-    const a = Math.abs(diffMs);
-    if (a <= PROFILE.judgeWindowPerfectMs) return "perfect";
-    if (a <= PROFILE.judgeWindowGreatMs) return "great";
-    if (a <= PROFILE.judgeWindowGoodMs) return "good";
-    if (a <= PROFILE.judgeWindowOkMs) return "ok";
-    return "miss";
-}
-
-// 가상 입력 스케줄을 차트로부터 계산한다.
-//  - beams: 넥 버튼(1~5)별 키빔 점등 구간(초). 각 피킹 그룹이 자기 버튼을 쥐고 있는 구간을 경계로 분할해 만든다.
-//    한 그룹은 기본 [처리−pre, 처리+post] 동안 점등하되, 다음 그룹이 처리 후 유지시간 안에 오면 그 다음 그룹의
-//    pre 시작점에서 버튼을 다음 그룹 버튼으로 넘긴다 — 즉 두 그룹이 겹쳐 함께 눌려 있지 않고, 이전 그룹의 전용
-//    버튼은 전환 시점에 떼어진다(다음 코드가 다르면 손가락을 바꾼다). 같은 버튼이 연속되면 경계가 맞닿아 연속 점등.
-//    롱노트는 머리~꼬리 내내 쥐고 있으므로 그 레인은 꼬리+post까지 유지한다(경계 분할 무시).
-//  - judgments/wailings/counts/maxCombo: 처리 결과. 오토 재생이라 피킹이 노트 시각과 정확히 일치 → 전부 Perfect/성공.
-//    노트 레인의 노트 1개 = 한 콤보(한 번의 피킹). 넥버튼은 buttons 비트마스크에서 펼친다.
-// TODO(미사용): judgments/wailings/counts/maxCombo는 추후 콤보·판정 애니메이션/통계 표시에 사용 예정.
-function computeInputSchedule(chart) {
-    const pre = PROFILE.keyHoldPreMs / 1000;
-    const post = PROFILE.keyHoldPostMs / 1000;
-
-    // 1) 피킹 그룹 — 노트 레인의 노트 1개 = 한 그룹(한 콤보, 한 번의 피킹). buttons에서 눌리는
-    //    넥버튼 레인(1~5)을 펼치고, 오픈픽은 별도로 표시한다. longTails[lane] = 롱노트 꼬리 시각(초).
-    const groups = chart.notes
-        .filter((n) => n.kind === "note")
-        .map((n) => {
-            const neck = neckButtonsOf(n.buttons);
-            const lanes = [];
-            const longTails = {};
-            for (let b = 1; b <= BUTTON_COUNT; b++) {
-                if (!(neck & (1 << (b - 1)))) continue;
-                lanes.push(b);
-                if (n.endTimeMs != null) longTails[b] = n.endTimeMs / 1000;
-            }
-            return {
-                timeMs: n.timeMs,
-                t: n.timeMs / 1000,
-                lanes,
-                openPick: isOpenPick(n.buttons),
-                longTails,
-            };
-        })
-        .sort((a, b) => a.t - b.t);
-
-    // 2) 넥 버튼(1~5) 키빔 구간 — 그룹별 점등 구간을 인접 그룹과의 전환 경계로 잘라 만든다.
-    //    이전 그룹과 겹치면 점등 시작을 이전 그룹 처리시각까지로 미루고(holdStart), 다음 그룹의 pre가
-    //    처리 후 유지시간 안에서 시작되면 거기서 점등을 끊는다(holdEnd) → 다음 그룹 버튼으로 전환.
-    //    멀리 떨어진 그룹끼리는 경계가 [t−pre,t+post] 밖이라 그 사이에 빈 구간(버튼 뗌)이 생긴다.
-    const laneIntervals = {};
-    for (let l = 1; l <= BUTTON_COUNT; l++) laneIntervals[l] = [];
-    for (let i = 0; i < groups.length; i++) {
-        const g = groups[i];
-        const prev = groups[i - 1];
-        const next = groups[i + 1];
-        const holdStart = prev ? Math.max(g.t - pre, prev.t) : g.t - pre;
-        const holdEnd = next
-            ? Math.min(g.t + post, Math.max(g.t, next.t - pre))
-            : g.t + post;
-        for (const lane of g.lanes) {
-            const tail = g.longTails[lane];
-            // 롱노트 레인은 꼬리+post까지(경계 분할 무시), 탭은 전환 경계까지.
-            const end = tail != null ? tail + post : holdEnd;
-            laneIntervals[lane].push([holdStart, end]);
-        }
-    }
-    const beams = {};
-    for (let l = 1; l <= BUTTON_COUNT; l++) {
-        beams[l] = mergeIntervals(laneIntervals[l]);
-    }
-
-    // 3) 판정 이벤트 — 그룹별. 오토 재생이라 피킹 편차 0 → 전부 Perfect.
-    const judgments = groups.map((g) => ({
-        timeMs: g.timeMs,
-        lanes: g.lanes.slice().sort((a, b) => a - b),
-        openPick: g.openPick,
-        pickDiffMs: 0, // 오토 = 정확히 처리(편차 0)
-        judge: classifyJudge(0), // perfect
-    }));
-
-    // 4) 웨일링 — 오토는 판정선 도달 즉시 입력 → 성공.
-    const wailings = chart.notes
-        .filter((n) => n.kind === "wailing")
-        .map((n) => ({ timeMs: n.timeMs, dir: n.dir, success: true }))
-        .sort((a, b) => a.timeMs - b.timeMs);
-
-    // 처리 결과 집계 (오토라 전부 Perfect, maxCombo = 콤보(그룹) 수).
-    const counts = { perfect: 0, great: 0, good: 0, ok: 0, miss: 0 };
-    for (const j of judgments) counts[j.judge]++;
-
-    return { beams, judgments, wailings, counts, maxCombo: judgments.length };
-}
-
-// 넥 버튼 lane(1~5)이 songTime에 눌려 있는가(키빔 점등 여부).
-function isLaneBeamOn(lane, songTime) {
-    if (!_inputSchedule) return false;
-    const intervals = _inputSchedule.beams[lane];
-    if (!intervals) return false;
-    for (const [down, up] of intervals) {
-        if (songTime >= down && songTime <= up) return true;
-    }
-    return false;
-}
-
 // ---- 드로우 함수 ----
-
-// 키빔 — 눌린 넥 버튼(1~5)의 레인 중앙에 노트색 실선을 레인 전체(laneTop~laneBottom)로 그린다.
-// 노트 등장 마스크 이후·커버 이전에 호출돼 레인 전체에 보이되 서든/히든에는 함께 가려진다.
-// (넥 버튼만 키빔이 있다 — 오픈픽·웨일링은 키빔 없음.)
-function drawKeyBeams(ctx, songTime) {
-    const { laneTop, laneBottom, keyBeamWidth, noteColors } = PROFILE;
-    const noteWidth = getNoteWidth();
-    ctx.lineWidth = keyBeamWidth;
-    for (let lane = 1; lane <= BUTTON_COUNT; lane++) {
-        if (!isLaneBeamOn(lane, songTime)) continue;
-        const cx = getNoteX(lane) + noteWidth / 2;
-        ctx.strokeStyle = noteColors[lane];
-        ctx.beginPath();
-        ctx.moveTo(cx, laneTop);
-        ctx.lineTo(cx, laneBottom);
-        ctx.stroke();
-    }
-}
 
 function drawBackground(ctx) {
     const {
@@ -516,8 +370,6 @@ function drawBackground(ctx) {
         laneLeft,
         wailingRight,
         buttonRight,
-        laneTop,
-        laneBottom,
         bgColor,
         laneBgColor,
         laneDividerColor,
@@ -526,6 +378,8 @@ function drawBackground(ctx) {
         buttonDividerWidth,
         noteGap,
     } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
     const noteWidth = getNoteWidth();
 
     ctx.fillStyle = bgColor;
@@ -562,13 +416,13 @@ function drawBeatLines(ctx, songTime) {
     const {
         laneLeft,
         wailingRight,
-        laneTop,
-        laneBottom,
         barLineColor,
         barLineWidth,
         beatLineColor,
         beatLineWidth,
     } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
     const speed_pps = getSpeedPps(_config);
     const judgeLineY = getInternalJudgeLineY(_config);
     const dir = _config.direction;
@@ -614,8 +468,6 @@ function drawNotes(ctx, songTime) {
     const {
         buttonRight,
         wailingRight,
-        laneTop,
-        laneBottom,
         judgeLineThickness,
         judgeLineStrokeWidth,
         noteColors,
@@ -624,6 +476,8 @@ function drawNotes(ctx, songTime) {
         wailingColor,
         wailingBorderColor,
     } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
     const noteWidth = getNoteWidth();
     const wailingWidth = wailingRight - buttonRight;
     const noteH = judgeLineThickness - 2 * judgeLineStrokeWidth;
@@ -756,8 +610,6 @@ function drawOpenPick(ctx, y, noteH) {
 // 처리 시작부터 꼬리 도달까지 정상적으로 처리되는 모습만 보인다.
 function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
     const {
-        laneTop,
-        laneBottom,
         judgeLineThickness,
         judgeLineStrokeWidth,
         noteColors,
@@ -768,6 +620,8 @@ function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
         longNoteHoldSize,
         longNoteHoldGap,
     } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
 
     const neck = neckButtonsOf(note.buttons);
     if (neck === 0) return; // 롱노트는 넥버튼만 (오픈픽·웨일링 롱노트 없음)
@@ -895,13 +749,140 @@ function drawJudgeLine(ctx) {
     ctx.strokeRect(laneLeft + lw / 2, y - h / 2 + lw / 2, w - lw, h - lw);
 }
 
+// ---- 노트 처리 이펙트 ----
+
+// 노트 처리 이벤트 발생 시 호출 — 폭발(라인별)·판정 표시를 (재)시작한다.
+// 이미 진행 중인 이펙트는 start를 현재 시각으로 덮어써 처음부터 다시 재생한다.
+function triggerNoteEffects(note) {
+    const now = _animClock;
+    const lanes = [];
+    if (isOpenPick(note.buttons)) {
+        // 오픈픽: 모든 라인에서 폭발.
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    } else {
+        const neck = neckButtonsOf(note.buttons);
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            if (!(neck & (1 << (b - 1)))) continue;
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    }
+    // 노트 단위로 폭발을 통째 교체 → 진행 중이던 다른 라인 폭발도 함께 취소·재시작.
+    if (lanes.length > 0) _explosionFx = { start: now, lanes };
+    _judgeFx = { start: now };
+}
+
+// prevTime~curTime(초) 사이에 내부 판정선을 지난(처리된) 노트를 찾아 이펙트를 발동한다.
+// 노트의 처리 시각 = note.timeMs(머리). 롱노트도 머리 처리 시점에 발동한다.
+function detectNoteProcessing(prevTime, curTime) {
+    if (curTime <= prevTime) return; // 되감기/루프 등 시간 역행 시 무시
+    for (const note of _chart.notes) {
+        if (note.kind !== "note") continue;
+        const t = note.timeMs / 1000;
+        if (t > prevTime && t <= curTime) triggerNoteEffects(note);
+    }
+}
+
+// 이펙트(폭발·판정 표시) 그리기. 진행 비율(0~1)이 1을 넘으면 제거한다.
+function drawEffects(ctx) {
+    const now = _animClock;
+
+    if (_explosionFx) {
+        const p = (now - _explosionFx.start) / PROFILE.explosionDurationMs;
+        if (p >= 1) {
+            _explosionFx = null;
+        } else {
+            for (const { lane, color } of _explosionFx.lanes) {
+                drawExplosion(ctx, lane, color, p);
+            }
+        }
+    }
+
+    if (_judgeFx) {
+        const p = (now - _judgeFx.start) / PROFILE.judgeTextDurationMs;
+        if (p >= 1) _judgeFx = null;
+        else drawJudgeText(ctx, p);
+    }
+}
+
+// 라인 b의 폭발 — 표시 판정선 위 라인 중심에 노트색 원이 커지며 옅어진다.
+function drawExplosion(ctx, b, color, p) {
+    const { explosionMaxRadius, explosionRingWidth } = PROFILE;
+    const cx = getNoteX(b) + getNoteWidth() / 2;
+    const cy = getVisualJudgeLineY(_config);
+    const ease = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    const r = explosionMaxRadius * ease;
+    const alpha = 1 - p;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = explosionRingWidth;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+    ctx.restore();
+}
+
+// 판정 표시의 기준 Y — judgelinePosition을 무시한 기본 판정선 위치(방향만 반영).
+// 판정 라인 위치 옵션을 바꿔도 Perfect 글자가 움직이지 않도록 고정 앵커로 쓴다.
+function getJudgeTextAnchorY(cfg) {
+    return cfg.direction === 1
+        ? PROFILE.judgeLineYReverse
+        : mirrorY(PROFILE.judgeLineYReverse);
+}
+
+// 판정 표시 — 기본 판정선에서 노트가 오는(상류) 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+function drawJudgeText(ctx, p) {
+    const {
+        laneLeft,
+        buttonRight,
+        judgeTextLabel,
+        judgeTextOffsetPx,
+        judgeTextFontSize,
+        judgeTextColor,
+        judgeTextOutlineColor,
+        judgeTextOutlineWidth,
+    } = PROFILE;
+    const dir = _config.direction;
+    const cx = (laneLeft + buttonRight) / 2;
+    // 앵커는 기본 판정선(판정선 위치 옵션 무관). 노트가 오는 방향(상류, 진행의 반대)으로 띄운다.
+    // Reverse(dir=1)는 위, Normal은 아래.
+    const cy = getJudgeTextAnchorY(_config) - dir * judgeTextOffsetPx;
+
+    // 등장(빠르게 키움) → 유지 → 소멸(옅어짐) 간략 엔벨로프.
+    const scale = 0.6 + 0.4 * Math.min(1, p / 0.2); // 앞 20% 동안 팝업
+    const alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4; // 뒤 40% 동안 페이드아웃
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.font = `bold ${judgeTextFontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = judgeTextOutlineWidth;
+    ctx.strokeStyle = judgeTextOutlineColor;
+    ctx.strokeText(judgeTextLabel, 0, 0);
+    ctx.fillStyle = judgeTextColor;
+    ctx.fillText(judgeTextLabel, 0, 0);
+    ctx.restore();
+}
+
 // 노트 등장 마스크.
 // 노트는 화면 밖에서부터 정상적으로 낙하하지만, noteSpawnY까지는 보이지 않는다.
 // 검정 서든이 아니라 레인 배경을 다시 그려 가리므로, 레인 구조(구분선)는 그대로 두고
 // 노트·박자선만 등장 지점 전까지 숨겨진다("투명 서든" 느낌).
 // drawNotes 직후 호출되어 등장 지점 이전 구간의 노트를 덮는다.
 function drawNoteSpawnMask(ctx) {
-    const { laneLeft, wailingRight, laneTop, laneBottom } = PROFILE;
+    const { laneLeft, wailingRight } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
     const spawnY = getNoteSpawnY(_config);
     const laneWidth = wailingRight - laneLeft;
 
@@ -922,8 +903,9 @@ function drawNoteSpawnMask(ctx) {
 // 서든/히든 가림막.
 // 경계 위치는 자신의 옵션값만으로 "기준 위치 + 가변량 × 옵션값"의 일차함수로 정해지며,
 // 판정선·타이밍 등 다른 옵션엔 영향받지 않는다. (코나스테와 달리 서든/히든 가변량이 다름)
-// 가리는 방향은 노트 등장 방향(direction)에 따라 바뀐다:
-// Normal에서는 서든이 하단(Reverse 히든), 히든이 상단(Reverse 서든)을 가린다.
+// Reverse: 서든=상단(화면 최상단~경계), 히든=하단(경계~화면 최하단)을 가린다.
+// Normal: Reverse 가림막을 화면 중심으로 그대로 상하 반전한다(서든이 하단, 히든이 상단으로 감).
+//         각 커버는 자기 상수(suddenPerUnit/hiddenPerUnit)를 유지한 채 반전된 위치에만 그려진다.
 // draw()에서 마지막에 호출되어 노트·박자선·판정선을 모두 덮는다.
 function drawCovers(ctx) {
     if (_config.sudden <= 0 && _config.hidden <= 0) return;
@@ -938,35 +920,30 @@ function drawCovers(ctx) {
         hiddenPerUnit,
     } = PROFILE;
     const laneWidth = wailingRight - laneLeft;
+    const reverse = _config.direction === 1;
 
     ctx.fillStyle = "rgba(0, 0, 0, 1)";
 
-    // 상단 가림: 화면 최상단(Y=0) ~ 경계. 경계 = suddenBaseY + suddenPerUnit × 옵션값.
-    const drawTopCover = (value) => {
-        const coverBottom = suddenBaseY + suddenPerUnit * value;
-        ctx.fillRect(laneLeft, 0, laneWidth, coverBottom);
-    };
-    // 하단 가림: 경계 ~ 화면 최하단(Y=height). 경계 = hiddenBaseY − hiddenPerUnit × 옵션값.
-    const drawBottomCover = (value) => {
-        const coverTop = hiddenBaseY - hiddenPerUnit * value;
-        ctx.fillRect(laneLeft, coverTop, laneWidth, height - coverTop);
-    };
-
-    if (_config.direction === 1) {
-        // Reverse: 노트가 위에서 등장 → 서든=상단 가림, 히든=하단 가림.
-        if (_config.sudden > 0) drawTopCover(_config.sudden);
-        if (_config.hidden > 0) drawBottomCover(_config.hidden);
-    } else {
-        // Normal: 노트가 아래에서 등장 →
-        // 서든은 Reverse 히든처럼 하단을, 히든은 Reverse 서든처럼 상단을 가린다.
-        if (_config.sudden > 0) drawBottomCover(_config.sudden);
-        if (_config.hidden > 0) drawTopCover(_config.hidden);
+    // 서든: Reverse에서 상단 0~suddenEdge. Normal은 그 상하 반전 → 하단 (height−suddenEdge)~height.
+    if (_config.sudden > 0) {
+        const suddenEdge = suddenBaseY + suddenPerUnit * _config.sudden;
+        if (reverse) ctx.fillRect(laneLeft, 0, laneWidth, suddenEdge);
+        else ctx.fillRect(laneLeft, height - suddenEdge, laneWidth, suddenEdge);
+    }
+    // 히든: Reverse에서 하단 hiddenEdge~height. Normal은 그 상하 반전 → 상단 0~(height−hiddenEdge).
+    if (_config.hidden > 0) {
+        const hiddenEdge = hiddenBaseY - hiddenPerUnit * _config.hidden;
+        if (reverse)
+            ctx.fillRect(laneLeft, hiddenEdge, laneWidth, height - hiddenEdge);
+        else ctx.fillRect(laneLeft, 0, laneWidth, height - hiddenEdge);
     }
 }
 
 // 고정 HUD 그리기.
-// 아레나는 레인 좌우 얇은 프레임·프레이즈 프레임이 없으므로 상단 HUD 패널만 그린다.
+// 아레나는 레인 좌우 얇은 프레임·프레이즈 프레임이 없으므로 HUD 패널만 그린다.
 // 패널은 레인 너비보다 넓고(`hudPanelWidth`) 레인 중심에 맞춰 배치된다.
+// Reverse는 화면 최상단(레인 위), Normal은 그 상하 반전으로 화면 최하단(레인 아래)에 둔다 —
+// 체력바·배속 박스가 아래로 내려온다. 패널 내부 글자는 항상 정방향(반전하지 않음).
 // 옵션에 따라 (서든/히든에) 가려질 수는 있으나 그 위치·형태는 변하지 않는다.
 // 모든 시각 요소 위(가장 나중)에 그려져 게임 UI 크롬 역할을 한다.
 function drawFrame(ctx) {
@@ -974,6 +951,7 @@ function drawFrame(ctx) {
         laneLeft,
         wailingRight,
         laneTop,
+        height,
         hudPanelWidth,
         hudPanelRadius,
         hudPanelColor,
@@ -993,52 +971,82 @@ function drawFrame(ctx) {
         hudHpBarColorPartial,
         hudHpRatio,
     } = PROFILE;
+    const reverse = _config.direction === 1;
 
-    // 상단 HUD 패널 — 화면 최상단(Y=0)~레인 시작(laneTop). 레인 중심 기준 좌우로 펼침.
+    // HUD 패널 — 레인 바깥 가장자리(Reverse: 화면 최상단~laneTop / Normal: height−laneTop~최하단).
+    // 레인 중심 기준 좌우로 펼친다.
     const laneCenter = (laneLeft + wailingRight) / 2;
     const panelWidth = hudPanelWidth;
     const panelLeft = laneCenter - panelWidth / 2;
     const panelRight = laneCenter + panelWidth / 2;
-    const panelTop = 0;
-    const panelHeight = laneTop; // panelTop(0) ~ laneTop
+    const panelHeight = laneTop; // 패널 높이 = 화면 가장자리~레인 시작
+    const panelTop = reverse ? 0 : height - laneTop;
+    const panelBottom = panelTop + panelHeight;
+
+    // 둥근 모서리는 레인에 가까운(화면 가장자리 반대) 쪽: Reverse는 하단, Normal은 상단.
     ctx.beginPath();
-    ctx.roundRect(panelLeft, panelTop, panelRight - panelLeft, panelHeight, [
-        0,
-        0,
-        hudPanelRadius,
-        hudPanelRadius,
-    ]);
+    ctx.roundRect(
+        panelLeft,
+        panelTop,
+        panelWidth,
+        panelHeight,
+        reverse
+            ? [0, 0, hudPanelRadius, hudPanelRadius]
+            : [hudPanelRadius, hudPanelRadius, 0, 0],
+    );
     ctx.fillStyle = hudPanelColor;
     ctx.fill();
 
-    // 테두리는 상단변을 제외하고(화면 최상단에 붙음) 좌·하(둥근)·우 변만 그린다.
-    const panelBottom = panelTop + panelHeight;
+    // 테두리는 화면 가장자리에 붙는 변(Reverse 상단/Normal 하단)을 빼고 나머지 3변만 그린다.
     ctx.beginPath();
-    ctx.moveTo(panelLeft, panelTop);
-    ctx.lineTo(panelLeft, panelBottom - hudPanelRadius);
-    ctx.arcTo(
-        panelLeft,
-        panelBottom,
-        panelLeft + hudPanelRadius,
-        panelBottom,
-        hudPanelRadius,
-    );
-    ctx.lineTo(panelRight - hudPanelRadius, panelBottom);
-    ctx.arcTo(
-        panelRight,
-        panelBottom,
-        panelRight,
-        panelBottom - hudPanelRadius,
-        hudPanelRadius,
-    );
-    ctx.lineTo(panelRight, panelTop);
+    if (reverse) {
+        // 좌 → 하(둥근) → 우
+        ctx.moveTo(panelLeft, panelTop);
+        ctx.lineTo(panelLeft, panelBottom - hudPanelRadius);
+        ctx.arcTo(
+            panelLeft,
+            panelBottom,
+            panelLeft + hudPanelRadius,
+            panelBottom,
+            hudPanelRadius,
+        );
+        ctx.lineTo(panelRight - hudPanelRadius, panelBottom);
+        ctx.arcTo(
+            panelRight,
+            panelBottom,
+            panelRight,
+            panelBottom - hudPanelRadius,
+            hudPanelRadius,
+        );
+        ctx.lineTo(panelRight, panelTop);
+    } else {
+        // 좌 → 상(둥근) → 우
+        ctx.moveTo(panelLeft, panelBottom);
+        ctx.lineTo(panelLeft, panelTop + hudPanelRadius);
+        ctx.arcTo(
+            panelLeft,
+            panelTop,
+            panelLeft + hudPanelRadius,
+            panelTop,
+            hudPanelRadius,
+        );
+        ctx.lineTo(panelRight - hudPanelRadius, panelTop);
+        ctx.arcTo(
+            panelRight,
+            panelTop,
+            panelRight,
+            panelTop + hudPanelRadius,
+            hudPanelRadius,
+        );
+        ctx.lineTo(panelRight, panelBottom);
+    }
     ctx.strokeStyle = hudPanelBorderColor;
     ctx.lineWidth = hudPanelBorderWidth;
     ctx.stroke();
 
-    // HUD 내부 좌측: 배속 표기 정사각형 (+ 현재 배속 숫자)
+    // HUD 내부 좌측: 배속 표기 정사각형 (+ 현재 배속 숫자). 패널 안에서 세로 중앙(panelTop 기준).
     const speedBoxX = panelLeft + hudInnerPadX;
-    const speedBoxY = (panelHeight - hudSpeedBoxSize) / 2;
+    const speedBoxY = panelTop + (panelHeight - hudSpeedBoxSize) / 2;
     ctx.fillStyle = hudSpeedBoxColor;
     ctx.fillRect(speedBoxX, speedBoxY, hudSpeedBoxSize, hudSpeedBoxSize);
     ctx.strokeStyle = hudSpeedBoxBorderColor;
@@ -1076,6 +1084,8 @@ function drawFrame(ctx) {
 function startCycle() {
     _songTime = -PROFILE.leadInMs / 1000;
     _freezeRemaining = PROFILE.introHoldMs / 1000;
+    _explosionFx = null;
+    _judgeFx = null;
 }
 
 // 현재 사이클의 시각 요소가 화면에서 모두 빠졌는지. 노트는 판정선에서 사라지므로
@@ -1084,7 +1094,8 @@ function isFieldEmpty(songTime) {
     const speed_pps = getSpeedPps(_config);
     const judgeLineY = getInternalJudgeLineY(_config);
     const dir = _config.direction;
-    const { laneTop, laneBottom } = PROFILE;
+    const laneTop = getLaneTop(_config);
+    const laneBottom = getLaneBottom(_config);
     const beatDur = 60 / _chart.timing.initialBpm;
     const cycleSec = _chart.cycle.timeMs / 1000;
     for (let t = 0; t < cycleSec; t += beatDur) {
@@ -1101,9 +1112,9 @@ function draw() {
     drawBeatLines(ctx, _songTime);
     drawNotes(ctx, _songTime);
     drawNoteSpawnMask(ctx);
-    drawKeyBeams(ctx, _songTime);
     drawCovers(ctx);
     drawJudgeLine(ctx);
+    drawEffects(ctx);
     drawFrame(ctx);
 }
 
@@ -1111,11 +1122,14 @@ function loop(now) {
     if (!_running) return;
     const dt = (now - _lastFrameTime) / 1000;
     _lastFrameTime = now;
+    _animClock += dt * 1000; // 이펙트 타이머는 항상 진행
     if (_freezeRemaining > 0) {
         // 곡 시작 대기: 노트는 표시되지만 움직이지 않는다(songTime 고정).
         _freezeRemaining -= dt;
     } else {
+        const prevTime = _songTime;
         _songTime += dt;
+        detectNoteProcessing(prevTime, _songTime); // 처리된 노트의 이펙트 발동
         // 곡 끝(cycle)을 지나 화면이 완전히 빈 뒤 다음 사이클을 시작한다(리드인+대기 재개).
         // → 다음 사이클 노트가 현재 사이클이 끝나기 전에 등장하지 않는다.
         const cycleSec = _chart.cycle.timeMs / 1000;
@@ -1163,36 +1177,36 @@ function computeNoteSpeedCmPerSec(speed_pps, metrics) {
 // monitorMetrics: { pixelPitchMm, widthPx, heightPx } | null
 //   - displayTimeMs: 모니터와 무관(시간 단위)하게 항상 계산.
 //   - noteSpeedCmPerSec: 모니터 미설정 시 null.
-// NOTE: Normal 모드 기하는 실측값이 아니므로(TODO) Normal 분석값도 추정치다.
+// NOTE: Normal 모드 기하는 Reverse를 화면 중심으로 상하 반전(mirrorY)한 값이라 완전 대칭이다.
 export function getAnalysis(cfg, monitorMetrics) {
     const speed_pps = getSpeedPps(cfg);
     const spawnY = getNoteSpawnY(cfg);
 
-    // 사라지는 기준선: 표시(노란) 판정선.
+    // 사라지는 기준선: 표시(노란) 판정선. 플레이어가 시각적으로 노트를 맞추는 선 기준의
+    // 표시 시간이므로 noteOffset/judgeOffset(내부 판정선만 이동)에는 영향받지 않는다.
     const judgeY = getVisualJudgeLineY(cfg);
 
     const sudden = cfg.sudden ?? 0;
     const hidden = cfg.hidden ?? 0;
 
-    // 커버 경계 — drawCovers와 동일 공식 (서든/히든 가변량이 다름).
-    const topCoverEdge = (v) => PROFILE.suddenBaseY + PROFILE.suddenPerUnit * v;
-    const bottomCoverEdge = (v) =>
-        PROFILE.hiddenBaseY - PROFILE.hiddenPerUnit * v;
+    // 커버 경계 — drawCovers와 동일. 서든은 suddenBaseY/PerUnit, 히든은 hiddenBaseY/PerUnit.
+    // Reverse는 서든=상단·히든=하단 경계, Normal은 각 경계를 화면 중심으로 상하 반전한 위치.
+    const suddenEdgeR = PROFILE.suddenBaseY + PROFILE.suddenPerUnit * sudden;
+    const hiddenEdgeR = PROFILE.hiddenBaseY - PROFILE.hiddenPerUnit * hidden;
 
     // appearY(처음 보이는 위치): 노트 등장 마스크 + 서든.
     // disappearY(사라지는 위치): 판정선 + 히든(판정선을 덮으면 히든 경계가 우선).
     let appearY, disappearY;
     if (cfg.direction === 1) {
         // Reverse(위→아래): 서든=상단 커버, 히든=하단 커버.
-        appearY = sudden > 0 ? Math.max(spawnY, topCoverEdge(sudden)) : spawnY;
-        disappearY =
-            hidden > 0 ? Math.min(judgeY, bottomCoverEdge(hidden)) : judgeY;
+        appearY = sudden > 0 ? Math.max(spawnY, suddenEdgeR) : spawnY;
+        disappearY = hidden > 0 ? Math.min(judgeY, hiddenEdgeR) : judgeY;
     } else {
-        // Normal(아래→위): 서든=하단 커버, 히든=상단 커버.
-        appearY =
-            sudden > 0 ? Math.min(spawnY, bottomCoverEdge(sudden)) : spawnY;
-        disappearY =
-            hidden > 0 ? Math.max(judgeY, topCoverEdge(hidden)) : judgeY;
+        // Normal(아래→위): Reverse 커버를 상하 반전 → 서든=하단 커버, 히든=상단 커버.
+        const suddenEdgeN = mirrorY(suddenEdgeR);
+        const hiddenEdgeN = mirrorY(hiddenEdgeR);
+        appearY = sudden > 0 ? Math.min(spawnY, suddenEdgeN) : spawnY;
+        disappearY = hidden > 0 ? Math.max(judgeY, hiddenEdgeN) : judgeY;
     }
 
     // 이동 방향 기준 가시 거리. 서든/히든이 반대편 경계를 넘어
@@ -1217,9 +1231,8 @@ export function init({ canvas, config }) {
     _canvas = canvas;
     _config = config;
     _running = false;
+    _animClock = 0;
     _chart = loadChart();
-    _phrases = computePhrases(_chart);
-    _inputSchedule = computeInputSchedule(_chart);
     startCycle(); // 대기 + 리드인부터 시작
     // 캔버스 내부 해상도를 게임 원본 해상도로 설정
     // CSS width/height:100%가 프리뷰 영역에 맞게 스케일해줌
@@ -1248,23 +1261,6 @@ export function reset() {
 // (재생 중에는 loop()가 매 프레임 그리므로 추가 호출이 무해하다.)
 export function redraw() {
     draw();
-}
-
-// 프레이즈(달성률 구간) 정보. 향후 판정/달성률 표시 기능에서 사용.
-export function getPhraseInfo() {
-    return { count: _phrases.length, phrases: _phrases };
-}
-
-// 가상 입력 처리 결과(판정/콤보 집계). 현재 미사용 — 추후 콤보·판정 애니메이션/통계 표시에 사용 예정.
-// TODO: 표시 기능 미구현(오토 재생이라 현재는 전부 Perfect/성공).
-export function getInputResult() {
-    if (!_inputSchedule) return null;
-    return {
-        judgments: _inputSchedule.judgments,
-        wailings: _inputSchedule.wailings,
-        counts: _inputSchedule.counts,
-        maxCombo: _inputSchedule.maxCombo,
-    };
 }
 
 export const DEFAULT_BMS = `#BPM 175
