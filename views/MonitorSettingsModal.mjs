@@ -1,29 +1,32 @@
-import * as Monitor from "../services/Monitor.mjs";
+// 모니터 설정 모달.
+// 화면 크기(인치)만 입력·저장한다. 해상도와 화면비는 표시 전용(수정·저장 불가):
+// 해상도는 게임 기본 모니터값, 화면비는 항상 16:9 고정.
+// "초기화" 버튼은 저장한 크기를 지우고 현재 게임 기본 모니터로 되돌린다(main.js의 onReset).
 
 let _overlay = null;
 let _closeBtn = null;
 let _isRequired = false;
 let _onSave = null;
+let _onReset = null;
 
-// 폼 입력 요소 참조
-let _presetSelect = null;
+// 폼 요소 참조
 let _sizeInput = null;
-let _widthInput = null;
-let _heightInput = null;
-let _delayInput = null;
-let _aspectDisplay = null;
-let _overrideCheck = null;
-let _aspectOverrideInput = null;
+let _resDisplay = null; // 해상도 표시 전용 요소
+
+// 화면비는 항상 16:9로 고정.
+const FIXED_ASPECT = "16:9";
 
 /**
  * 모니터 설정 모달을 초기화합니다.
  * @param {HTMLElement} container - #modal-root 요소
  * @param {object} opts
  * @param {function} opts.onSave - 저장 콜백 (monitorData) => void
+ * @param {function} [opts.onReset] - 초기화 콜백 () => void (현재 게임 기본값으로 복원)
  * @param {object|null} opts.monitor - 현재 저장된 모니터 데이터
  */
-export function init(container, { onSave, monitor }) {
+export function init(container, { onSave, onReset, monitor }) {
     _onSave = onSave;
+    _onReset = onReset;
 
     _overlay = document.createElement("div");
     _overlay.className = "modal-overlay hidden";
@@ -61,29 +64,9 @@ export function init(container, { onSave, monitor }) {
     const body = document.createElement("div");
     body.className = "modal-body";
 
-    // 프리셋 드롭다운
-    const presetGroup = makeFieldGroup("빠른 선택");
-    _presetSelect = document.createElement("select");
-    _presetSelect.className = "modal-select";
-    Monitor.getPresets().forEach((p, i) => {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = p.label;
-        _presetSelect.appendChild(opt);
-    });
-    _presetSelect.addEventListener("change", () => {
-        const idx = parseInt(_presetSelect.value, 10);
-        const preset = Monitor.getPresets()[idx];
-        if (preset) fillForm(preset);
-    });
-    presetGroup.append(_presetSelect);
-
-    const divider = document.createElement("hr");
-    divider.className = "modal-divider";
-
     // 크기
     const sizeGroup = makeFieldGroup("화면 크기 (인치)");
-    _sizeInput = makeInput("number", "24", "narrow");
+    _sizeInput = makeInput("number", "32", "narrow");
     _sizeInput.min = 1;
     _sizeInput.max = 100;
     _sizeInput.step = 0.1;
@@ -92,67 +75,30 @@ export function init(container, { onSave, monitor }) {
     sizeRow.append(_sizeInput, makeSep('"'));
     sizeGroup.appendChild(sizeRow);
 
-    // 해상도
+    // 해상도 (게임 기본값, 표시 전용 — 수정·저장 안 함)
     const resGroup = makeFieldGroup("해상도");
-    _widthInput = makeInput("number", "1920", "narrow");
-    _widthInput.min = 1;
-    _heightInput = makeInput("number", "1080", "narrow");
-    _heightInput.min = 1;
-    const resRow = document.createElement("div");
-    resRow.className = "field-row";
-    resRow.append(_widthInput, makeSep("×"), _heightInput);
-    resGroup.appendChild(resRow);
+    _resDisplay = document.createElement("span");
+    _resDisplay.className = "res-display";
+    resGroup.appendChild(_resDisplay);
 
-    // 해상도 변경 시 화면비 자동 계산
-    [_widthInput, _heightInput].forEach((inp) =>
-        inp.addEventListener("input", updateAspectDisplay),
-    );
-
-    // 입력 지연
-    const delayGroup = makeFieldGroup("입력 지연 (ms)");
-    _delayInput = makeInput("number", "0", "narrow");
-    _delayInput.min = 0;
-    _delayInput.max = 1000;
-    _delayInput.step = 0.1;
-    const delayRow = document.createElement("div");
-    delayRow.className = "field-row";
-    delayRow.append(_delayInput, makeSep("ms"));
-    delayGroup.appendChild(delayRow);
-
-    // 화면비 (자동 계산 + 수동 오버라이드)
+    // 화면비 (항상 16:9 고정, 읽기 전용 표시)
     const aspectGroup = makeFieldGroup("화면비");
-    const aspectRow = document.createElement("div");
-    aspectRow.className = "aspect-row";
-    _aspectDisplay = document.createElement("span");
-    _aspectDisplay.className = "aspect-display";
-    _aspectDisplay.textContent = "16:9";
-    const overrideLabel = document.createElement("label");
-    overrideLabel.className = "aspect-override-label";
-    _overrideCheck = document.createElement("input");
-    _overrideCheck.type = "checkbox";
-    _overrideCheck.addEventListener("change", () => {
-        _aspectOverrideInput.disabled = !_overrideCheck.checked;
-        if (!_overrideCheck.checked) updateAspectDisplay();
-    });
-    _aspectOverrideInput = makeInput("text", "16:9", "narrow");
-    _aspectOverrideInput.placeholder = "예: 16:9";
-    _aspectOverrideInput.disabled = true;
-    overrideLabel.append(_overrideCheck, document.createTextNode("수동 입력"));
-    aspectRow.append(_aspectDisplay, overrideLabel, _aspectOverrideInput);
-    aspectGroup.appendChild(aspectRow);
+    const aspectDisplay = document.createElement("span");
+    aspectDisplay.className = "aspect-display";
+    aspectDisplay.textContent = FIXED_ASPECT;
+    aspectGroup.appendChild(aspectDisplay);
 
-    body.append(
-        presetGroup,
-        divider,
-        sizeGroup,
-        resGroup,
-        delayGroup,
-        aspectGroup,
-    );
+    body.append(sizeGroup, resGroup, aspectGroup);
 
     // 푸터
     const footer = document.createElement("div");
     footer.className = "modal-footer";
+
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "btn-secondary";
+    resetBtn.textContent = "초기화";
+    resetBtn.addEventListener("click", () => _onReset?.());
 
     const saveBtn = document.createElement("button");
     saveBtn.type = "button";
@@ -160,7 +106,7 @@ export function init(container, { onSave, monitor }) {
     saveBtn.textContent = "저장";
     saveBtn.addEventListener("click", handleSave);
 
-    footer.appendChild(saveBtn);
+    footer.append(resetBtn, saveBtn);
 
     dialog.append(header, body, footer);
     _overlay.appendChild(dialog);
@@ -168,7 +114,6 @@ export function init(container, { onSave, monitor }) {
 
     // 기존 저장값이 있으면 폼에 채우기
     if (monitor) fillForm(monitor);
-    updateAspectDisplay();
 }
 
 /** 외부에서 모니터 데이터가 바뀌었을 때 폼 내용을 갱신합니다. */
@@ -193,53 +138,17 @@ function updateCloseButtonState() {
 }
 
 function handleSave() {
-    const data = {
-        sizeInches: parseFloatOrNull(_sizeInput.value),
-        widthPx: parseIntOrNull(_widthInput.value),
-        heightPx: parseIntOrNull(_heightInput.value),
-        inputDelayMs: parseFloatOrNull(_delayInput.value) ?? 0,
-        aspectOverride: _overrideCheck.checked
-            ? _aspectOverrideInput.value.trim() || null
-            : null,
-    };
-    _onSave?.(data);
+    // 크기(인치)만 저장한다. 해상도·화면비는 표시 전용이라 저장 데이터에 넣지 않는다.
+    _onSave?.({ sizeInches: parseFloatOrNull(_sizeInput.value) });
     close();
 }
 
 function fillForm(data) {
     if (_sizeInput) _sizeInput.value = data.sizeInches ?? "";
-    if (_widthInput) _widthInput.value = data.widthPx ?? "";
-    if (_heightInput) _heightInput.value = data.heightPx ?? "";
-    if (_delayInput) _delayInput.value = data.inputDelayMs ?? 0;
-    if (data.aspectOverride) {
-        _overrideCheck.checked = true;
-        _aspectOverrideInput.disabled = false;
-        _aspectOverrideInput.value = data.aspectOverride;
-    } else {
-        _overrideCheck.checked = false;
-        _aspectOverrideInput.disabled = true;
+    if (_resDisplay) {
+        _resDisplay.textContent =
+            data.widthPx && data.heightPx ? `${data.widthPx} × ${data.heightPx}` : "—";
     }
-    updateAspectDisplay();
-}
-
-function updateAspectDisplay() {
-    if (_overrideCheck?.checked) return;
-    const w = parseInt(_widthInput?.value, 10);
-    const h = parseInt(_heightInput?.value, 10);
-    if (!w || !h) {
-        if (_aspectDisplay) _aspectDisplay.textContent = "—";
-        return;
-    }
-    const g = gcd(w, h);
-    const ratioText = `${w / g}:${h / g}`;
-    if (_aspectDisplay) _aspectDisplay.textContent = ratioText;
-    if (_aspectOverrideInput && !_overrideCheck?.checked) {
-        _aspectOverrideInput.value = ratioText;
-    }
-}
-
-function gcd(a, b) {
-    return b === 0 ? a : gcd(b, a % b);
 }
 
 function makeFieldGroup(labelText) {
@@ -269,10 +178,5 @@ function makeSep(text) {
 
 function parseFloatOrNull(v) {
     const n = parseFloat(v);
-    return Number.isNaN(n) ? null : n;
-}
-
-function parseIntOrNull(v) {
-    const n = parseInt(v, 10);
     return Number.isNaN(n) ? null : n;
 }

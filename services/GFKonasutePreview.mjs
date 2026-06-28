@@ -39,17 +39,17 @@ const PROFILE = {
     speedPerUnit: 3,
 
     // 타이밍 오프셋 (단위: 프레임 @fps)
-    // noteOffset 1단위 = 실제로 0.4프레임 더 늦게 쳐야 함
+    // noteOffset 1단위가 몇 프레임의 타이밍 변화에 해당하는지(변환 계수)
     offsetPerUnitFrames: 0.4,
-    baseNoteOffset: 5, // 기본 노트 표시 타이밍 (옵션 단위). noteOffset에 항상 더해짐. 5 × 0.4 = 2프레임 당김.
+    baseNoteOffset: 5, // 기본 노트 표시 타이밍 (옵션 단위). noteOffset에 항상 더해진다(당김 방향).
 
     // ── 재생 인트로 (한 사이클 시작 연출). 둘 다 실측값 아님 ──
-    // introHoldSec: 곡 시작 대기시간(초). 이 동안 노트는 화면에 표시되지만 정지해 있다(움직이지 않음).
-    // leadInSec: 대기 후 첫 마디 시작(t=0)이 판정선에 닿기까지의 이동 시간(초).
-    //            사이클 시작 songTime을 -leadInSec로 두어 그 시간만큼 위에서 판정선까지 내려오게 한다.
+    // introHoldMs: 곡 시작 대기시간(ms). 이 동안 노트는 화면에 표시되지만 정지해 있다(움직이지 않음).
+    // leadInMs: 대기 후 첫 마디 시작(t=0)이 판정선에 닿기까지의 이동 시간(ms).
+    //            사이클 시작 songTime을 -leadInMs로 두어 그 시간만큼 위에서 판정선까지 내려오게 한다.
     // TODO: 둘 다 임시 추정치 — 실측/취향에 맞춰 보정 필요.
-    introHoldSec: 1.5,
-    leadInSec: 0.5,
+    introHoldMs: 1500,
+    leadInMs: 500,
 
     // ── 프레임/HUD (옵션과 무관한 고정 구조. 값은 임시 추정치, 추후 실측 보정 예정) ──
 
@@ -94,8 +94,8 @@ const PROFILE = {
     laneBgColor: "#111120", // 레인 영역 배경
 
     // 레인 세로 구분선
-    laneDividerColor: "#334455", // 버튼 사이 얇은 세로 구분선
-    laneDividerWidth: 1,
+    laneDividerColor: "#ffffff", // 버튼 사이 레인 구분선
+    laneDividerWidth: 2,
     buttonDividerColor: "#556677", // 5버튼 영역과 웨일링 영역 사이 굵은 세로선
     buttonDividerWidth: 2,
 
@@ -112,10 +112,26 @@ const PROFILE = {
     noteBorderColor: "rgba(255,255,255,0.4)",
     noteBorderWidth: 1,
 
+    // 노트 간격 — 버튼 영역(laneLeft~buttonRight) 안에서 5개 노트를 같은 너비로 두고,
+    // 노트 사이(4칸)와 양 사이드(2칸)에 모두 이 값(px)만큼 빈 공간을 둔다(총 6칸 간격 + 5칸 노트).
+    noteGap: 3,
+
+    // 오픈픽(OPEN PICK) — 아무 버튼도 누르지 않고 피킹만 해서 처리하는 노트.
+    // 5버튼 전 영역을 차지하는 밝은 핑크 막대(두께는 일반 노트와 동일)에 가운데 굵은 "OPEN" 글자를 얹는다.
+    // 막대가 얇아 글자가 가로로 퍼지므로 자간(openPickLetterSpacing)으로 적당히 벌리고 검은 테두리를 두른다.
+    openPickColor: "#ff80ff", // 5번 핑크 버튼보다 조금 더 밝은 핑크
+    openPickTextColor: "#ffffff",
+    openPickOutlineColor: "#000000",
+    openPickOutlineWidth: 1, // "OPEN" 글자 검은 테두리 두께 (px)
+    openPickTextOffsetX: 5, // "OPEN" 글자 위치 오프셋 x 좌표 (px)
+    openPickFontSize: 8, // 글자 세로 높이(두께) (px) — 막대보다 크게 두껍게
+    openPickLetterSpacing: 4, // 글자 사이 기본 간격(px) — 가로 늘임 전 기준
+    openPickTextWidth: 108.3, // "OPEN"이 차지할 가로 너비 (px) — 이 너비에 맞춰 글자를 가로로 늘임
+
     // 롱노트(홀드) — 머리는 일반 노트와 동일, 머리~꼬리를 레인 폭의 반투명 박스로 잇는다.
-    longNoteAlpha: 0.2, // 몸통 투명도 (≈80% 투명). noteColors 색에 적용.
+    longNoteAlpha: 0.2, // 몸통 불투명도(0~1). noteColors 색에 적용.
     longNoteHoldColor: "#ffffff", // 머리 부근 "Hold" 글자 색
-    longNoteHoldSizeRatio: 0.7, // "Hold" 글자 크기(px) = 버튼 레인 너비 × 이 비율
+    longNoteHoldSize: 38.22, // "Hold" 글자 크기 (px)
     longNoteHoldGap: 6, // 근단(near)과 글자 가까운 끝 사이의 여백 (px)
 
     // 웨일링 화살표 기하 (px)
@@ -129,45 +145,84 @@ const PROFILE = {
     noteColors: [null, "#ff4444", "#44ff44", "#4444ff", "#ffff44", "#ff44ff"],
     wailingColor: "#ff4444",
     wailingBorderColor: "#ffffff",
+
+    // ── 노트 처리 이펙트 (임시 추정치 — 개략 표시, 추후 보정) ──
+    // 폭발: 표시 판정선 위 해당 라인 중심에 노트색 원이 커지며 사라진다(오픈픽은 전 라인).
+    explosionMaxRadius: 40, // 폭발 원 최대 반지름 (px)
+    explosionRingWidth: 4, // 폭발 외곽 링 두께 (px)
+    explosionDurationMs: 300, // 폭발 1회 지속 시간 (ms)
+    // 판정 표시: 기본 판정선(판정선 위치 옵션 무관) 기준 노트가 오는 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+    judgeTextLabel: "Perfect",
+    judgeTextOffsetPx: 200, // 기본 판정선에서 노트가 오는(상류) 방향으로 띄우는 거리 (px)
+    judgeTextFontSize: 44, // "Perfect" 글자 크기 (px)
+    judgeTextColor: "#ffee88",
+    judgeTextOutlineColor: "#000000",
+    judgeTextOutlineWidth: 4, // 글자 검은 테두리 두께 (px)
+    judgeTextDurationMs: 400, // 판정 표시 1회 지속 시간 (ms)
 };
 
 // ---- 노트 레인 해석 ----
-// BMS 채널 둘째 자리 = 레인 번호. 이 렌더러는 레인 1~5를 5버튼 노트로,
-// 6/7을 웨일링↑/↓, 8을 프레이즈 경계로 해석하고 그 외 레인은 무시(버림)한다.
+// 기타도라는 한 번의 피킹이 하나의 노트(콤보)다. 따라서 화음(동시치기)을 여러 오브젝트로
+// 쪼개지 않고, 노트 레인 하나에 눌러야 할 넥버튼을 비트마스크(buttons)로 담는 단일 노트로 본다.
+// BMS 채널 둘째 자리 = 레인 번호. 이 렌더러는 레인 1을 노트 레인(넥+오픈픽),
+// 2를 웨일링, 3을 프레이즈 경계로 해석하고 그 외 레인은 무시(버림)한다.
 // 스크립트에 없는 레인은 빈 레인으로 둔다(노트가 내려오지 않음).
-const BUTTON_COUNT = 5; // 5버튼 = 레인 1~5
-const WAILING_LANE_UP = 6; // 채널 16
-const WAILING_LANE_DOWN = 7; // 채널 17
-const PHRASE_LANE = 8; // 채널 18 — 프레이즈(달성률 구간) 경계. 화면엔 안 그림.
+const BUTTON_COUNT = 5; // 넥버튼 5개 (R/G/B/Y/P = buttons의 bit0~bit4)
+const NOTE_LANE = 1; // 채널 11 — 노트 레인. value(buttons)에 넥버튼 비트마스크 + 오픈픽 비트.
+const WAILING_LANE = 2; // 채널 12 — 웨일링 (value 01=↑, 02=↓)
+const PHRASE_LANE = 3; // 채널 13 — 프레이즈(달성률 구간) 경계. 화면엔 안 그림.
 
-// 고정 BMS(DEFAULT_BMS)를 파싱한다. 실패 시 빈 차트로 폴백.
-function loadChart() {
-    const parsed = BMSParser.parse(DEFAULT_BMS);
-    if (parsed.ok) return parsed;
-    return {
-        notes: [],
-        cycle: { measureCount: 0, timeMs: 1 },
-        timing: { initialBpm: 120, bpmEvents: [], measures: [] },
-    };
+// buttons 비트 구성: 하위 5비트(0x1F) = 눌러야 하는 넥버튼, 0x20 비트 = 오픈픽(넥버튼 없이 피킹).
+// 오픈픽은 넥버튼이 0이라 0x20 비트로 빈칸과 구분한다.
+const NECK_BUTTON_MASK = 0x1f;
+const OPEN_PICK_BIT = 0x20;
+
+// buttons가 오픈픽인지 (0x20 비트가 켜졌는지).
+function isOpenPick(buttons) {
+    return (buttons & OPEN_PICK_BIT) !== 0;
 }
 
-// 프레이즈(기타도라 달성률 구간) 경계 계산.
-// 곡을 n등분한 구간이며 구간 사이 빈 곳은 없다. PHRASE_LANE 노트 = 각 프레이즈의 "끝".
-// BMS는 노트 외 사운드(BGM 등)가 있어 스크립트만으론 실제 곡 끝을 알 수 없으므로,
-// 마지막 프레이즈 노트가 곡 끝을 정의한다(그 노트가 든 마디의 끝 = 곡 끝 = 루프 지점 = cycle.timeMs).
-// 따라서 프레이즈 수 = 프레이즈 노트 수. 첫 프레이즈는 곡 시작(0)부터 시작한다.
-// (마지막 프레이즈 노트는 모든 게임플레이 노트보다 뒤여야 한다 — 스크립트 작성 규칙.)
-function computePhrases(chart) {
-    const ends = chart.notes
-        .filter((n) => n.lane === PHRASE_LANE && n.timeMs > 0)
-        .map((n) => n.timeMs)
-        .sort((a, b) => a - b);
-    const bounds = [0, ...ends];
-    const phrases = [];
-    for (let i = 0; i + 1 < bounds.length; i++) {
-        phrases.push({ startMs: bounds[i], endMs: bounds[i + 1] });
+// buttons에서 눌러야 하는 넥버튼 비트만 추출 (하위 5비트).
+function neckButtonsOf(buttons) {
+    return buttons & NECK_BUTTON_MASK;
+}
+
+// 고정 BMS(DEFAULT_BMS)를 파싱하고, 게임 중립 파서의 레인/값을 이 렌더러의 노트 모델로 정규화한다.
+// 실패 시 빈 차트로 폴백.
+//  - 노트 레인: value를 base36 정수로 디코드해 buttons(넥 비트마스크 + 오픈픽 비트)로 둔다.
+//  - 웨일링 레인: value 1=↑, 2=↓.
+//  - 프레이즈 레인: 시각(timeMs)만 사용.
+function loadChart() {
+    const parsed = BMSParser.parse(DEFAULT_BMS);
+    if (!parsed.ok) {
+        return {
+            notes: [],
+            cycle: { measureCount: 0, timeMs: 1 },
+            timing: { initialBpm: 120, bpmEvents: [], measures: [] },
+        };
     }
-    return phrases;
+    const notes = [];
+    for (const n of parsed.notes) {
+        if (n.lane === NOTE_LANE) {
+            notes.push({
+                kind: "note",
+                buttons: parseInt(n.value, 36) || 0,
+                timeMs: n.timeMs,
+                endTimeMs: n.endTimeMs,
+            });
+        } else if (n.lane === WAILING_LANE) {
+            const v = parseInt(n.value, 36) || 0;
+            notes.push({
+                kind: "wailing",
+                dir: v === 2 ? "down" : "up",
+                timeMs: n.timeMs,
+            });
+        } else if (n.lane === PHRASE_LANE) {
+            notes.push({ kind: "phrase", timeMs: n.timeMs });
+        }
+        // 그 외 레인: 무시(버림)
+    }
+    return { notes, cycle: parsed.cycle, timing: parsed.timing };
 }
 
 // ---- 모듈 상태 ----
@@ -178,8 +233,16 @@ let _running = false;
 let _songTime = 0;
 let _lastFrameTime = 0;
 let _chart = null; // 파싱된 BMS 차트 (notes, cycle, timing)
-let _phrases = []; // 프레이즈 경계 구간 [{ startMs, endMs }, ...]
 let _freezeRemaining = 0; // 곡 시작 대기 잔여 시간(초). >0이면 노트 정지(표시만).
+
+// 이펙트 타이머(ms). 매 프레임 dt만큼 누적해 이펙트 진행을 잰다(정지 시 멈춤).
+let _animClock = 0;
+// 폭발 이펙트(노트 단위, 라인 연동) { start, lanes:[{lane,color}] } | null. start는 _animClock 기준.
+// 기타도라는 코드(화음) 전체가 한 노트라 폭발도 노트 단위다 — 새 노트 처리 시 진행 중이던
+// 폭발을 통째로 교체(취소·재시작)하고, 한 노트의 여러 라인은 같은 start로 함께 진행한다.
+let _explosionFx = null;
+// 판정 표시 이펙트 { start } | null. 노트 처리 때마다 재시작.
+let _judgeFx = null;
 
 // ---- 유틸 ----
 
@@ -212,7 +275,7 @@ function getVisualJudgeLineY(cfg) {
 // 노트·박자선·마디선은 이 선을 기준으로 그려진다 (노트가 이 선에 닿는 순간 = 키음 타이밍).
 // 화면에는 그리지 않는다 (향후 판정 표시 기능에서 사용 예정).
 //
-// noteOffset > 0 → 0.4프레임 늦게 쳐야 함 → Reverse에서 내부선이 아래(Y 증가)
+// noteOffset > 0 → 더 늦게 쳐야 함 → Reverse에서 내부선이 아래(Y 증가)
 // judgeOffset > 0 → noteOffset 반대 방향 → Reverse에서 내부선이 위(Y 감소)
 function getInternalJudgeLineY(cfg) {
     const speed_ppf = getSpeedPpf(cfg);
@@ -255,6 +318,24 @@ function getVisibleTimeOffsets(
     return [Math.min(tAtTop, tAtBottom), Math.max(tAtTop, tAtBottom)];
 }
 
+// 버튼 노트 한 칸의 너비 (px). 버튼 영역을 5개 노트 + 6칸 간격(noteGap)으로 나눈다
+// (노트 사이 4칸 + 양 사이드 2칸). 모든 버튼 노트는 같은 너비.
+function getNoteWidth() {
+    const { laneLeft, buttonRight, noteGap } = PROFILE;
+    return (
+        (buttonRight - laneLeft - (BUTTON_COUNT + 1) * noteGap) / BUTTON_COUNT
+    );
+}
+
+// 레인(1~BUTTON_COUNT)의 노트 좌측 X 좌표. 좌측 사이드 간격(noteGap)부터 시작한다.
+function getNoteX(lane) {
+    return (
+        PROFILE.laneLeft +
+        PROFILE.noteGap +
+        (lane - 1) * (getNoteWidth() + PROFILE.noteGap)
+    );
+}
+
 // ---- 드로우 함수 ----
 
 function drawBackground(ctx) {
@@ -272,8 +353,9 @@ function drawBackground(ctx) {
         laneDividerWidth,
         buttonDividerColor,
         buttonDividerWidth,
+        noteGap,
     } = PROFILE;
-    const buttonWidth = (buttonRight - laneLeft) / BUTTON_COUNT;
+    const noteWidth = getNoteWidth();
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
@@ -286,10 +368,11 @@ function drawBackground(ctx) {
         laneBottom - laneTop,
     );
 
+    // 버튼 사이 구분선은 노트 사이 빈 공간(간격)의 한가운데에 그린다.
     ctx.strokeStyle = laneDividerColor;
     ctx.lineWidth = laneDividerWidth;
     for (let i = 1; i < BUTTON_COUNT; i++) {
-        const x = laneLeft + i * buttonWidth;
+        const x = laneLeft + i * noteWidth + (i + 0.5) * noteGap;
         ctx.beginPath();
         ctx.moveTo(x, laneTop);
         ctx.lineTo(x, laneBottom);
@@ -358,7 +441,6 @@ function drawBeatLines(ctx, songTime) {
 
 function drawNotes(ctx, songTime) {
     const {
-        laneLeft,
         buttonRight,
         wailingRight,
         laneTop,
@@ -371,7 +453,7 @@ function drawNotes(ctx, songTime) {
         wailingColor,
         wailingBorderColor,
     } = PROFILE;
-    const buttonWidth = (buttonRight - laneLeft) / BUTTON_COUNT;
+    const noteWidth = getNoteWidth();
     const wailingWidth = wailingRight - buttonRight;
     const noteH = judgeLineThickness - 2 * judgeLineStrokeWidth;
 
@@ -393,7 +475,7 @@ function drawNotes(ctx, songTime) {
     // 곡이 끝나기 전에 다음 사이클 노트가 등장하지 않는다(루프는 loop()가 songTime 되감기로 처리).
     for (const note of _chart.notes) {
         // 롱노트(endTimeMs 보유)는 머리가 판정선을 지난 뒤에도 몸통이 남으므로 별도 처리.
-        if (note.endTimeMs != null) {
+        if (note.kind === "note" && note.endTimeMs != null) {
             drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps);
             continue;
         }
@@ -405,28 +487,88 @@ function drawNotes(ctx, songTime) {
         const y = getNoteY(judgeLineY, dir, t, songTime, speed_pps);
         if (y < laneTop || y > laneBottom) continue;
 
-        const lane = note.lane;
-        if (lane >= 1 && lane <= BUTTON_COUNT) {
-            const x = laneLeft + (lane - 1) * buttonWidth;
-            const ny = y - noteH / 2;
-            ctx.fillStyle = noteColors[lane];
-            ctx.fillRect(x, ny, buttonWidth, noteH);
-            ctx.strokeStyle = noteBorderColor;
-            ctx.lineWidth = noteBorderWidth;
-            ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
-        } else if (lane === WAILING_LANE_UP || lane === WAILING_LANE_DOWN) {
+        if (note.kind === "note") {
+            if (isOpenPick(note.buttons)) {
+                drawOpenPick(ctx, y, noteH);
+            } else {
+                // 눌리는 넥버튼마다 노트색 사각형을 그린다(화음 = 한 노트의 여러 버튼).
+                const neck = neckButtonsOf(note.buttons);
+                const ny = y - noteH / 2;
+                for (let b = 1; b <= BUTTON_COUNT; b++) {
+                    if (!(neck & (1 << (b - 1)))) continue;
+                    const x = getNoteX(b);
+                    ctx.fillStyle = noteColors[b];
+                    ctx.fillRect(x, ny, noteWidth, noteH);
+                    ctx.strokeStyle = noteBorderColor;
+                    ctx.lineWidth = noteBorderWidth;
+                    ctx.strokeRect(x + 0.5, ny + 0.5, noteWidth - 1, noteH - 1);
+                }
+            }
+        } else if (note.kind === "wailing") {
             drawWailingArrow(
                 ctx,
                 buttonRight,
                 wailingWidth,
                 y,
-                lane === WAILING_LANE_UP ? "up" : "down",
+                note.dir,
                 wailingColor,
                 wailingBorderColor,
             );
         }
-        // 그 외 레인: 이 렌더러가 사용하지 않음 → 버림
+        // 프레이즈 경계(kind === "phrase")는 화면에 그리지 않는다.
     }
+}
+
+// 오픈픽(OPEN PICK) 그리기 — 5버튼 전 영역(노트1 좌단~노트5 우단)을 차지하는 밝은 핑크 막대.
+// 두께(noteH)·양 사이드 간격(noteGap)은 일반 노트와 동일하고, 가운데에 굵은 "OPEN" 글자를 얹는다.
+// 막대가 얇고 넓으므로 글자를 자간(openPickLetterSpacing)으로 벌린 뒤, 목표 너비
+// (openPickTextWidth)만큼 차지하도록 가로로 늘인다(세로 높이는 openPickFontSize 그대로).
+// 검은 테두리(strokeText)를 둘러 가독성을 높인다.
+function drawOpenPick(ctx, y, noteH) {
+    const {
+        openPickColor,
+        openPickTextColor,
+        openPickOutlineColor,
+        openPickOutlineWidth,
+        openPickFontSize,
+        openPickLetterSpacing,
+        openPickTextWidth,
+        noteBorderColor,
+        noteBorderWidth,
+        openPickTextOffsetX,
+    } = PROFILE;
+    const noteWidth = getNoteWidth();
+    const left = getNoteX(1);
+    const right = getNoteX(BUTTON_COUNT) + noteWidth;
+    const w = right - left;
+    const ny = y - noteH / 2;
+
+    ctx.fillStyle = openPickColor;
+    ctx.fillRect(left, ny, w, noteH);
+    ctx.strokeStyle = noteBorderColor;
+    ctx.lineWidth = noteBorderWidth;
+    ctx.strokeRect(left + 0.5, ny + 0.5, w - 1, noteH - 1);
+
+    ctx.save();
+    ctx.font = `bold ${openPickFontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.letterSpacing = `${openPickLetterSpacing}px`;
+    ctx.lineJoin = "round";
+
+    // 자연 너비를 재고 목표 너비(openPickTextWidth)에 맞춰 가로 배율을 구한다.
+    const naturalW = ctx.measureText("OPEN").width;
+    const scaleX = naturalW > 0 ? openPickTextWidth / naturalW : 1;
+    ctx.translate(left + w / 2, y);
+    ctx.scale(scaleX, 1);
+
+    // 테두리는 늘인 글자에 비례하도록 같은 변환 안에서 그린다.
+    ctx.lineWidth = openPickOutlineWidth;
+    ctx.strokeStyle = openPickOutlineColor;
+    ctx.strokeText("OPEN", openPickTextOffsetX, 0);
+    ctx.fillStyle = openPickTextColor;
+    ctx.fillText("OPEN", openPickTextOffsetX, 0);
+    ctx.restore();
 }
 
 // 롱노트(홀드) 그리기.
@@ -443,8 +585,6 @@ function drawNotes(ctx, songTime) {
 // 처리 시작부터 꼬리 도달까지 정상적으로 처리되는 모습만 보인다.
 function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
     const {
-        laneLeft,
-        buttonRight,
         laneTop,
         laneBottom,
         judgeLineThickness,
@@ -454,19 +594,18 @@ function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
         noteBorderWidth,
         longNoteAlpha,
         longNoteHoldColor,
-        longNoteHoldSizeRatio,
+        longNoteHoldSize,
         longNoteHoldGap,
     } = PROFILE;
 
-    const lane = note.lane;
-    if (lane < 1 || lane > BUTTON_COUNT) return; // 롱노트는 5버튼 레인만(웨일링 롱노트 없음)
+    const neck = neckButtonsOf(note.buttons);
+    if (neck === 0) return; // 롱노트는 넥버튼만 (오픈픽·웨일링 롱노트 없음)
 
     const headT = note.timeMs / 1000;
     const tailT = note.endTimeMs / 1000;
     if (songTime >= tailT) return; // 꼬리가 내부 판정선 도달 → 롱노트 전체 소멸
 
-    const buttonWidth = (buttonRight - laneLeft) / BUTTON_COUNT;
-    const x = laneLeft + (lane - 1) * buttonWidth;
+    const buttonWidth = getNoteWidth();
 
     // 머리/꼬리는 내부 판정선 기준으로 평범하게 떨어진다.
     const headY = getNoteY(judgeLineY, dir, headT, songTime, speed_pps);
@@ -484,43 +623,51 @@ function drawLongNote(ctx, note, songTime, judgeLineY, dir, speed_pps) {
     const bottom = Math.min(laneBottom, Math.max(startY, tailY));
     if (bottom <= top) return; // 화면 밖
 
-    // 반투명 몸통
-    ctx.save();
-    ctx.globalAlpha = longNoteAlpha;
-    ctx.fillStyle = noteColors[lane];
-    ctx.fillRect(x, top, buttonWidth, bottom - top);
-    ctx.restore();
-
-    // 머리(시작 지점, 일반 노트와 동일) — 시작 지점에 그린다.
     const noteH = judgeLineThickness - 2 * judgeLineStrokeWidth;
-    if (startY >= laneTop && startY <= laneBottom) {
-        const ny = startY - noteH / 2;
-        ctx.fillStyle = noteColors[lane];
-        ctx.fillRect(x, ny, buttonWidth, noteH);
-        ctx.strokeStyle = noteBorderColor;
-        ctx.lineWidth = noteBorderWidth;
-        ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
-    }
-
-    // "Hold" 글자 — 90도 회전(위→아래 읽음). 글자 크기 = 레인 폭 × 비율.
-    // 시작 지점에서 꼬리 방향으로 글자 절반 길이만큼 밀고, 몸통(top~bottom)으로 클리핑해 롱노트 안에서만 보인다
-    // (끝지점이 글자 중간에 오면 그 너머는 잘림). 회전 방향은 H가 항상 시작(판정선) 쪽에 오도록 정한다.
+    // 회전 방향은 H가 항상 시작(판정선) 쪽에 오도록 꼬리 방향 부호로 정한다.
     const towardTail = Math.sign(tailY - startY) || -dir;
-    const fontSize = buttonWidth * longNoteHoldSizeRatio;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, top, buttonWidth, bottom - top);
-    ctx.clip();
-    ctx.font = `${fontSize}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const textLen = ctx.measureText("Hold").width;
-    const textCenterY = startY + towardTail * (longNoteHoldGap + textLen / 2);
-    ctx.translate(x + buttonWidth / 2, textCenterY);
-    ctx.rotate((towardTail * Math.PI) / 2); // H가 시작(판정선) 쪽
-    ctx.fillStyle = longNoteHoldColor;
-    ctx.fillText("Hold", 0, 0);
-    ctx.restore();
+    const fontSize = longNoteHoldSize;
+
+    // 눌리는 넥버튼마다 몸통+머리+"Hold"를 그린다(화음 전체가 같은 길이로 유지됨).
+    for (let b = 1; b <= BUTTON_COUNT; b++) {
+        if (!(neck & (1 << (b - 1)))) continue;
+        const x = getNoteX(b);
+
+        // 반투명 몸통
+        ctx.save();
+        ctx.globalAlpha = longNoteAlpha;
+        ctx.fillStyle = noteColors[b];
+        ctx.fillRect(x, top, buttonWidth, bottom - top);
+        ctx.restore();
+
+        // 머리(시작 지점, 일반 노트와 동일)
+        if (startY >= laneTop && startY <= laneBottom) {
+            const ny = startY - noteH / 2;
+            ctx.fillStyle = noteColors[b];
+            ctx.fillRect(x, ny, buttonWidth, noteH);
+            ctx.strokeStyle = noteBorderColor;
+            ctx.lineWidth = noteBorderWidth;
+            ctx.strokeRect(x + 0.5, ny + 0.5, buttonWidth - 1, noteH - 1);
+        }
+
+        // "Hold" 글자 — 90도 회전(위→아래 읽음). 시작 지점에서 꼬리 방향으로 글자 절반 길이만큼
+        // 밀고, 몸통(top~bottom)으로 클리핑해 롱노트 안에서만 보인다(끝지점이 글자 중간에 오면 잘림).
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, top, buttonWidth, bottom - top);
+        ctx.clip();
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const textLen = ctx.measureText("Hold").width;
+        const textCenterY =
+            startY + towardTail * (longNoteHoldGap + textLen / 2);
+        ctx.translate(x + buttonWidth / 2, textCenterY);
+        ctx.rotate((towardTail * Math.PI) / 2); // H가 시작(판정선) 쪽
+        ctx.fillStyle = longNoteHoldColor;
+        ctx.fillText("Hold", 0, 0);
+        ctx.restore();
+    }
 }
 
 function drawWailingArrow(ctx, wx, ww, y, dir, fillColor, strokeColor) {
@@ -576,6 +723,131 @@ function drawJudgeLine(ctx) {
     ctx.strokeStyle = judgeLineColor;
     ctx.lineWidth = lw;
     ctx.strokeRect(laneLeft + lw / 2, y - h / 2 + lw / 2, w - lw, h - lw);
+}
+
+// ---- 노트 처리 이펙트 ----
+
+// 노트 처리 이벤트 발생 시 호출 — 폭발(라인별)·판정 표시를 (재)시작한다.
+// 이미 진행 중인 이펙트는 start를 현재 시각으로 덮어써 처음부터 다시 재생한다.
+function triggerNoteEffects(note) {
+    const now = _animClock;
+    const lanes = [];
+    if (isOpenPick(note.buttons)) {
+        // 오픈픽: 모든 라인에서 폭발.
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    } else {
+        const neck = neckButtonsOf(note.buttons);
+        for (let b = 1; b <= BUTTON_COUNT; b++) {
+            if (!(neck & (1 << (b - 1)))) continue;
+            lanes.push({ lane: b, color: PROFILE.noteColors[b] });
+        }
+    }
+    // 노트 단위로 폭발을 통째 교체 → 진행 중이던 다른 라인 폭발도 함께 취소·재시작.
+    if (lanes.length > 0) _explosionFx = { start: now, lanes };
+    _judgeFx = { start: now };
+}
+
+// prevTime~curTime(초) 사이에 내부 판정선을 지난(처리된) 노트를 찾아 이펙트를 발동한다.
+// 노트의 처리 시각 = note.timeMs(머리). 롱노트도 머리 처리 시점에 발동한다.
+function detectNoteProcessing(prevTime, curTime) {
+    if (curTime <= prevTime) return; // 되감기/루프 등 시간 역행 시 무시
+    for (const note of _chart.notes) {
+        if (note.kind !== "note") continue;
+        const t = note.timeMs / 1000;
+        if (t > prevTime && t <= curTime) triggerNoteEffects(note);
+    }
+}
+
+// 이펙트(폭발·판정 표시) 그리기. 진행 비율(0~1)이 1을 넘으면 제거한다.
+function drawEffects(ctx) {
+    const now = _animClock;
+
+    if (_explosionFx) {
+        const p = (now - _explosionFx.start) / PROFILE.explosionDurationMs;
+        if (p >= 1) {
+            _explosionFx = null;
+        } else {
+            for (const { lane, color } of _explosionFx.lanes) {
+                drawExplosion(ctx, lane, color, p);
+            }
+        }
+    }
+
+    if (_judgeFx) {
+        const p = (now - _judgeFx.start) / PROFILE.judgeTextDurationMs;
+        if (p >= 1) _judgeFx = null;
+        else drawJudgeText(ctx, p);
+    }
+}
+
+// 라인 b의 폭발 — 표시 판정선 위 라인 중심에 노트색 원이 커지며 옅어진다.
+function drawExplosion(ctx, b, color, p) {
+    const { explosionMaxRadius, explosionRingWidth } = PROFILE;
+    const cx = getNoteX(b) + getNoteWidth() / 2;
+    const cy = getVisualJudgeLineY(_config);
+    const ease = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    const r = explosionMaxRadius * ease;
+    const alpha = 1 - p;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = explosionRingWidth;
+    ctx.strokeStyle = "#ffffff";
+    ctx.stroke();
+    ctx.restore();
+}
+
+// 판정 표시의 기준 Y — judgelinePosition을 무시한 기본 판정선 위치(방향만 반영).
+// 판정 라인 위치 옵션을 바꿔도 Perfect 글자가 움직이지 않도록 고정 앵커로 쓴다.
+function getJudgeTextAnchorY(cfg) {
+    return cfg.direction === 1
+        ? PROFILE.judgeLineYReverse
+        : PROFILE.judgeLineYNormal;
+}
+
+// 판정 표시 — 기본 판정선에서 노트가 오는(상류) 방향으로 떨어진 위치에 "Perfect"가 떴다 사라진다.
+function drawJudgeText(ctx, p) {
+    const {
+        laneLeft,
+        buttonRight,
+        judgeTextLabel,
+        judgeTextOffsetPx,
+        judgeTextFontSize,
+        judgeTextColor,
+        judgeTextOutlineColor,
+        judgeTextOutlineWidth,
+    } = PROFILE;
+    const dir = _config.direction;
+    const cx = (laneLeft + buttonRight) / 2;
+    // 앵커는 기본 판정선(판정선 위치 옵션 무관). 노트가 오는 방향(상류, 진행의 반대)으로 띄운다.
+    // Reverse(dir=1)는 위, Normal은 아래.
+    const cy = getJudgeTextAnchorY(_config) - dir * judgeTextOffsetPx;
+
+    // 등장(빠르게 키움) → 유지 → 소멸(옅어짐) 간략 엔벨로프.
+    const scale = 0.6 + 0.4 * Math.min(1, p / 0.2); // 앞 20% 동안 팝업
+    const alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4; // 뒤 40% 동안 페이드아웃
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.font = `bold ${judgeTextFontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = judgeTextOutlineWidth;
+    ctx.strokeStyle = judgeTextOutlineColor;
+    ctx.strokeText(judgeTextLabel, 0, 0);
+    ctx.fillStyle = judgeTextColor;
+    ctx.fillText(judgeTextLabel, 0, 0);
+    ctx.restore();
 }
 
 // 노트 등장 마스크.
@@ -770,11 +1042,13 @@ function drawFrame(ctx) {
 // ---- 메인 드로우 / 루프 ----
 
 // 한 사이클을 시작(또는 재시작)한다.
-// songTime을 -leadInSec로 두어 첫 마디(t=0)가 leadInSec 동안 판정선까지 내려오게 하고,
-// introHoldSec 동안은 노트를 정지(표시만)시켜 곡 시작 대기 연출을 한다(loop()의 freeze 처리).
+// songTime을 -leadInMs로 두어 첫 마디(t=0)가 leadInMs 동안 판정선까지 내려오게 하고,
+// introHoldMs 동안은 노트를 정지(표시만)시켜 곡 시작 대기 연출을 한다(loop()의 freeze 처리).
 function startCycle() {
-    _songTime = -PROFILE.leadInSec;
-    _freezeRemaining = PROFILE.introHoldSec;
+    _songTime = -PROFILE.leadInMs / 1000;
+    _freezeRemaining = PROFILE.introHoldMs / 1000;
+    _explosionFx = null;
+    _judgeFx = null;
 }
 
 // 현재 사이클의 시각 요소가 화면에서 모두 빠졌는지. 노트는 판정선에서 사라지므로
@@ -802,6 +1076,7 @@ function draw() {
     drawNoteSpawnMask(ctx);
     drawCovers(ctx);
     drawJudgeLine(ctx);
+    drawEffects(ctx);
     drawFrame(ctx);
 }
 
@@ -809,11 +1084,14 @@ function loop(now) {
     if (!_running) return;
     const dt = (now - _lastFrameTime) / 1000;
     _lastFrameTime = now;
+    _animClock += dt * 1000; // 이펙트 타이머는 항상 진행
     if (_freezeRemaining > 0) {
         // 곡 시작 대기: 노트는 표시되지만 움직이지 않는다(songTime 고정).
         _freezeRemaining -= dt;
     } else {
+        const prevTime = _songTime;
         _songTime += dt;
+        detectNoteProcessing(prevTime, _songTime); // 처리된 노트의 이펙트 발동
         // 곡 끝(cycle)을 지나 화면이 완전히 빈 뒤 다음 사이클을 시작한다(리드인+대기 재개).
         // → 다음 사이클 노트가 현재 사이클이 끝나기 전에 등장하지 않는다.
         const cycleSec = _chart.cycle.timeMs / 1000;
@@ -865,9 +1143,8 @@ export function getAnalysis(cfg, monitorMetrics) {
     const speed_pps = getSpeedPps(cfg);
     const spawnY = getNoteSpawnY(cfg);
 
-    // 사라지는 기준선: 표시(노란) 판정선.
-    // TODO: 정확한 타이밍 기준을 내부 판정선(getInternalJudgeLineY)으로 할지,
-    //       또는 표시선·내부선 둘 다 표기할지 확인 필요.
+    // 사라지는 기준선: 표시(노란) 판정선. 플레이어가 시각적으로 노트를 맞추는 선 기준의
+    // 표시 시간이므로 noteOffset/judgeOffset(내부 판정선만 이동)에는 영향받지 않는다.
     const judgeY = getVisualJudgeLineY(cfg);
 
     const sudden = cfg.sudden ?? 0;
@@ -916,8 +1193,8 @@ export function init({ canvas, config }) {
     _canvas = canvas;
     _config = config;
     _running = false;
+    _animClock = 0;
     _chart = loadChart();
-    _phrases = computePhrases(_chart);
     startCycle(); // 대기 + 리드인부터 시작
     // 캔버스 내부 해상도를 게임 원본 해상도로 설정
     // CSS width/height:100%가 프리뷰 영역에 맞게 스케일해줌
@@ -948,83 +1225,43 @@ export function redraw() {
     draw();
 }
 
-// 프레이즈(달성률 구간) 정보. 향후 판정/달성률 표시 기능에서 사용.
-export function getPhraseInfo() {
-    return { count: _phrases.length, phrases: _phrases };
-}
-
 export const DEFAULT_BMS = `#BPM 175
 #PLAYER 1
 #TITLE GF Test Pattern
 #ARTIST -
 #LNOBJ ZZ
 
-*-- 11~15 = 5버튼(R/G/B/Y/P), 16 = 웨일링↑, 17 = 웨일링↓, 18 = 프레이즈 경계(각 노트 = 그 프레이즈의 끝).
-*-- 롱노트: 1x 채널의 노트 뒤에 종료 마커 ZZ(#LNOBJ)를 두면 그 사이가 홀드가 된다(마디 9·10 참고).
+*-- 단일 레인 비트마스크 포맷:
+*--   11 = 노트 레인(넥+오픈픽). value(base36) = 넥버튼 비트마스크(bit0=R,1=G,2=B,3=Y,4=P; 01~1F),
+*--        0W(=32, 0x20 비트) = 오픈픽(버튼 없이 피킹), ZZ(#LNOBJ) = 직전 노트를 롱노트로 종료.
+*--   12 = 웨일링(01=↑, 02=↓), 13 = 프레이즈 경계(각 노트 = 그 프레이즈의 끝).
+*-- 예: R+G=03, G+Y=0A, B+Y=0C, P=0G, 오픈픽=0W.
+*-- 롱노트: 노트 레인의 노트 뒤에 종료 마커 ZZ를 두면 그 사이가 홀드가 된다(마디 9·10 참고).
 
-*-- 마디 0: beat0=1, beat1=2, beat2=3, beat3=4
-#00011:00
+*-- 마디 0: 비어 있음(박자 기준).
 
-#00111:01000000010001010100010001000100
-#00112:01000000010001000000010000000000
-#00113:00000000000001000000000000000000
-#00114:00000000000001000000000000000000
-#00115:00000000000001000000000000000000
+#00111:0300000003000W010100030001000100
 
-#00211:01000100010001000100010001000100
-#00212:01000000000001000000010000000000
-#00213:00000000000000000000000000000000
-#00214:00000000000000000000000000000000
-#00215:00000000000000000000000000000000
+#00211:03000100010003000100030001000100
 
-#00311:00000000000000010100000001000000
-#00312:01000000010001010100010001000100
-#00313:01000000010000010100010001000100
-#00314:00000000000000010100000001000000
-#00315:00000000000000010100000001000000
+#00311:060000000600020W0W0006000W000600
 
-#00411:01000000000000000000000000000100
-#00412:01000000000001000000000001000000
-#00413:01000100010000000000010000000000
-#00414:01000001000000000100000000000000
-#00415:01000000000000000000000000000000
+#00411:0W000408040002000800040002000100
 
-#00511:00000000000000010100000001000000
-#00512:00000000000000010100000001000000
-#00513:01000000010001010100010001000100
-#00514:01000000010001010100010001000100
-#00515:00000000000000010100000001000000
-#00518:01000000000000000000000000000000
+*-- 마디 5: 프레이즈 경계(달성률 구간 1의 끝).
+#00511:0C0000000C000C0W0W000C000W000C00
+#00513:01
 
-#00611:01000000000000000000000000000000
-#00612:01000000000000000000000001000000
-#00613:01000000000001000000010000000000
-#00614:01000100010000000100000000000000
-#00615:01000001000000000000000000000000
+#00611:0W00080G080004000800040002000000
 
-#00711:01010101000000000000000000000000
-#00712:00000000010101010000000000000000
-#00713:00000000000000000101010100000000
-#00714:00000000000000000000000001010101
-#00715:00000000000000000000000000000000
+#00711:01010101020202020404040408080808
 
-#00811:00000000000000000000000000000000
-#00812:01010101000000000000000000000000
-#00813:00000000010101010000000000000000
-#00814:00000000000000000101010100000000
-#00815:00000000000000000000000001010101
+#00811:0202020204040404080808080G0G0G0G
 
-*-- 마지막 노트(레인 2·4, 마디 9 시작)는 롱노트의 머리. 종료 마커 ZZ를 마디 10 시작(=마디 9 끝)에 둬
-*--   마디 9 전체 길이만큼 지속되는 홀드로 만든다.
-#00911:00000000000000000000000000000000
-#00912:01000000000000000000000000000000
-#00913:00000000000000000000000000000000
-#00914:01000000000000000000000000000000
-#00915:00000000000000000000000000000000
-#00918:00000000000000000000000000000000
+*-- 마디 9~10: G+Y(0A) 롱노트 머리(마디 9 시작) → 종료 마커 ZZ(마디 10 시작)로 마디 9 전체 홀드.
+#00911:0A
 
-*-- 마디 10: 롱노트 종료 마커(레인 2·4) + 마지막 프레이즈 경계(곡 끝 정의).
-#01012:ZZ
-#01014:ZZ
-#01018:01
+*-- 마디 10: 롱노트 종료 마커 + 마지막 프레이즈 경계(곡 끝 정의).
+#01011:ZZ
+#01013:01
 `;

@@ -1,72 +1,13 @@
-const STORAGE_KEY = "rg-monitor";
-
-const PRESETS = [
-    {
-        label: '32" 1920×1080 (아케이드)',
-        sizeInches: 32,
-        widthPx: 1920,
-        heightPx: 1080,
-        inputDelayMs: 0,
-    },
-    {
-        label: '24" 1920×1080',
-        sizeInches: 24,
-        widthPx: 1920,
-        heightPx: 1080,
-        inputDelayMs: 0,
-    },
-    {
-        label: '27" 1920×1080',
-        sizeInches: 27,
-        widthPx: 1920,
-        heightPx: 1080,
-        inputDelayMs: 0,
-    },
-    {
-        label: '27" 2560×1440',
-        sizeInches: 27,
-        widthPx: 2560,
-        heightPx: 1440,
-        inputDelayMs: 0,
-    },
-    {
-        label: '32" 3840×2160',
-        sizeInches: 32,
-        widthPx: 3840,
-        heightPx: 2160,
-        inputDelayMs: 0,
-    },
-    {
-        label: '15.6" 1920×1080 (노트북)',
-        sizeInches: 15.6,
-        widthPx: 1920,
-        heightPx: 1080,
-        inputDelayMs: 0,
-    },
-];
-
-// 기본 모니터 — 아케이드와 동일 환경(32" 1920×1080). 저장값이 없을 때 사용.
-const DEFAULT_MONITOR = {
-    sizeInches: 32,
-    widthPx: 1920,
-    heightPx: 1080,
-    inputDelayMs: 0,
-    aspectOverride: null,
-};
+// 모니터 설정 보관(분석용).
+// 모니터 크기(인치)는 게임별 옵션 쿠키(OptionStore, `rg-opt-<presetId>`)에 옵션값과 함께 저장되고,
+// 해상도(widthPx·heightPx)는 게임 defaultMonitor에서 온다. 화면비는 항상 16:9 고정.
+// 이 모듈은 현재 모니터값을 들고 요약·픽셀 피치만 계산한다(쿠키·영속화는 Option/OptionStore가 담당).
 
 let _monitor = null;
 
-export function init() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        try {
-            _monitor = JSON.parse(stored);
-        } catch {
-            _monitor = { ...DEFAULT_MONITOR };
-        }
-    } else {
-        _monitor = { ...DEFAULT_MONITOR };
-    }
+// 현재 모니터값을 설정한다. { sizeInches, widthPx, heightPx } | null
+export function set(monitor) {
+    _monitor = monitor ? { ...monitor } : null;
 }
 
 export function isSet() {
@@ -75,15 +16,6 @@ export function isSet() {
 
 export function getMonitor() {
     return _monitor ? { ..._monitor } : null;
-}
-
-export function save(data) {
-    _monitor = { ...data };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(_monitor));
-}
-
-export function getPresets() {
-    return PRESETS;
 }
 
 export function getSummaryText() {

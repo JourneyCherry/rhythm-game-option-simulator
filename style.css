@@ -448,6 +448,28 @@ button {
     border-top: 1px solid var(--color-border);
 }
 
+/* 옵션 초기화 버튼 (패널 하단 고정, inner 스크롤 바깥) */
+.options-panel-footer {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.options-reset-btn {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    background: var(--color-chip-bg);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-chip-border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.options-reset-btn:hover {
+    background: var(--color-chip-hover);
+}
+
 .options-panel-inner {
     flex: 1;
     min-height: 0; /* rows: 세로 스크롤을 위해 필요 */
@@ -707,6 +729,14 @@ button {
 .options-panel-inner.layout-cols .option-slider { order: 2; }
 .options-panel-inner.layout-cols .dec-btn  { order: 3; } /* − 아래 */
 .options-panel-inner.layout-cols .range-value   { order: 4; }
+
+/* invertButtonsWhenDirection 옵션(서든·히든)의 반전 상태: +를 아래·−를 위로 스왑.
+   커버 경계가 움직이는 화면 방향과 +방향을 맞춘다(동작은 동일, 위치만 반전). */
+.options-panel-inner.layout-cols .range-control.buttons-inverted .inc-btn { order: 3; } /* + 아래 */
+.options-panel-inner.layout-cols .range-control.buttons-inverted .dec-btn { order: 1; } /* − 위 */
+/* 슬라이더도 방향을 뒤집어 −(위) → +(아래)로 향하게 한다(최댓값이 + 버튼 쪽).
+   기본 세로 슬라이더는 direction: rtl(최댓값 위)이므로 ltr로 덮어 최댓값을 아래로 보낸다. */
+.options-panel-inner.layout-cols .range-control.buttons-inverted .option-slider { direction: ltr; }
 
 /* ====================
    Preview Area
@@ -1027,42 +1057,11 @@ button {
     flex-shrink: 0;
 }
 
-.modal-select {
-    padding: 7px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--color-border);
-    background: #2a2a2a;
-    color: var(--color-text-main);
-    font-size: 0.9rem;
-    width: 100%;
-    cursor: pointer;
-}
-
-.aspect-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.aspect-display {
+.aspect-display,
+.res-display {
     font-size: 0.9rem;
     color: var(--color-text-main);
     min-width: 60px;
-}
-
-.aspect-override-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-    cursor: pointer;
-}
-
-.modal-divider {
-    border: none;
-    border-top: 1px solid var(--color-border);
-    margin: 2px 0;
 }
 
 .btn-primary {
